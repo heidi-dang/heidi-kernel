@@ -161,27 +161,50 @@ void HttpServer::handle_client(int client_fd) {
     write(client_fd, response.c_str(), response.size());
 }
 
-HttpRequest HttpServer::parse_request(const std::string& data) const {
+HttpRequest HttpServer::parse_request(const std::string& data) {
     HttpRequest req;
+    std::string_view sv(data);
 
-    size_t pos = data.find("\r\n\r\n");
-    std::string_view body_view;
-    if (pos != std::string::npos) {
-        body_view = std::string_view(data).substr(pos + 4);
+    size_t line_end = sv.find("\r\n");
+    if (line_end == std::string_view::npos) {
+        return req;
     }
 
-    size_t line_end = data.find("\r\n");
-    if (line_end != std::string::npos) {
-        std::string_view request_line(data.c_str(), line_end);
-        size_t sp1 = request_line.find(' ');
-        size_t sp2 = request_line.find(' ', sp1 + 1);
-        if (sp1 != std::string::npos && sp2 != std::string::npos) {
-            req.method = trim(request_line.substr(0, sp1));
-            req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+    std::string_view request_line = sv.substr(0, line_end);
+    sv.remove_prefix(line_end + 2);
+
+    size_t sp1 = request_line.find(' ');
+    size_t sp2 = request_line.find(' ', sp1 + 1);
+
+    if (sp1 == std::string_view::npos || sp2 == std::string_view::npos) {
+        return req;
+    }
+
+    req.method = trim(request_line.substr(0, sp1));
+    req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+
+    while (true) {
+        line_end = sv.find("\r\n");
+        if (line_end == std::string_view::npos) {
+            break;
+        }
+
+        std::string_view line = sv.substr(0, line_end);
+        sv.remove_prefix(line_end + 2);
+
+        if (line.empty()) {
+            req.body = sv;
+            break;
+        }
+
+        size_t colon = line.find(':');
+        if (colon != std::string_view::npos) {
+            std::string key(trim(line.substr(0, colon)));
+            std::string value(trim(line.substr(colon + 1)));
+            req.headers[key] = value;
         }
     }
 
-    req.body = body_view;
     return req;
 }
 
