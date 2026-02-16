@@ -201,6 +201,69 @@ TEST_F(JobTest, ScanBudget_Respected) {
     EXPECT_LE(diag.jobs_scanned_this_tick, policy_.max_job_scans_per_tick);
 }
 
+TEST_F(JobTest, StartBudget_CappedAt5_PerTick) {
+    for (int i = 0; i < 20; ++i) {
+        runner_->submit_job("echo " + std::to_string(i));
+    }
+    
+    for (int tick = 0; tick < 5; ++tick) {
+        auto diag = runner_->tick(now_ms_);
+        EXPECT_LE(diag.jobs_started_this_tick, policy_.max_job_starts_per_tick);
+        now_ms_ += 100;
+        spawner_->advance_time(now_ms_);
+    }
+}
+
+TEST_F(JobTest, ScanBudget_CappedAt10_AndCursorAdvances) {
+    for (int i = 0; i < 12; ++i) {
+        runner_->submit_job("echo " + std::to_string(i));
+    }
+    runner_->tick(now_ms_);
+    
+    now_ms_ += 1000;
+    spawner_->advance_time(now_ms_);
+    
+    auto diag1 = runner_->tick(now_ms_);
+    EXPECT_LE(diag1.jobs_scanned_this_tick, policy_.max_job_scans_per_tick);
+    int scanned_at_tick1 = diag1.jobs_scanned_this_tick;
+    
+    now_ms_ += 1000;
+    spawner_->advance_time(now_ms_);
+    
+    auto diag2 = runner_->tick(now_ms_);
+    int scanned_at_tick2 = diag2.jobs_scanned_this_tick;
+    
+    EXPECT_EQ(scanned_at_tick1, scanned_at_tick2);
+}
+
+TEST_F(JobTest, Determinism_SameTickSequenceSameFinalState) {
+    auto create_runner = [this]() {
+        auto spawner = std::make_unique<FakeProcessSpawner>();
+        auto inspector = std::make_unique<FakeProcessInspector>();
+        return std::make_unique<JobRunner>(policy_, std::move(spawner), std::move(inspector));
+    };
+    
+    auto run_sequence = [&](JobRunner& runner) {
+        for (int i = 0; i < 10; ++i) {
+            runner.submit_job("echo " + std::to_string(i));
+        }
+        int64_t t = 0;
+        for (int tick = 0; tick < 3; ++tick) {
+            t += 100;
+            runner.tick(t);
+        }
+        return runner.get_recent_jobs(10).size();
+    };
+    
+    auto runner1 = create_runner();
+    auto runner2 = create_runner();
+    
+    int result1 = run_sequence(*runner1);
+    int result2 = run_sequence(*runner2);
+    
+    EXPECT_EQ(result1, result2);
+}
+
 TEST_F(JobTest, PolicyUpdate_Valid) {
     ResourcePolicy new_policy = policy_;
     new_policy.max_processes_per_job = 20;

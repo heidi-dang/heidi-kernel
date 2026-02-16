@@ -230,6 +230,9 @@ bool JobRunner::update_policy(const ResourcePolicy& policy) {
 }
 
 TickDiagnostics JobRunner::tick(int64_t now_ms) {
+    // Tick-driven model: all time progression via explicit now_ms parameter.
+    // No wall-clock dependencies; all enforcement uses passed-in timestamps.
+    // Budgets are hard caps: max_job_starts_per_tick, max_job_scans_per_tick.
     TickDiagnostics diag;
     diag.tick_time_ms = now_ms;
     
@@ -247,6 +250,8 @@ TickDiagnostics JobRunner::tick(int64_t now_ms) {
 }
 
 void JobRunner::start_pending_jobs(int64_t now_ms, TickDiagnostics& diag) {
+    // Hard cap: max_job_starts_per_tick and max_concurrent_jobs.
+    // No code path should exceed these limits.
     std::lock_guard<std::mutex> lock(jobs_mutex_);
     
     // Count currently running jobs
@@ -288,6 +293,7 @@ void JobRunner::start_pending_jobs(int64_t now_ms, TickDiagnostics& diag) {
 }
 
 void JobRunner::scan_running_jobs(int64_t now_ms, TickDiagnostics& diag) {
+    // Hard cap: max_job_scans_per_tick. Round-robin scanning ensures fairness.
     std::lock_guard<std::mutex> lock(jobs_mutex_);
     
     if (job_ids_.empty()) return;
