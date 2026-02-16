@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(unit_tests
+    test_http_parser.cpp
     test_config.cpp
     test_ipc.cpp
     test_metrics.cpp
@@ -18,6 +19,7 @@ add_executable(unit_tests
     test_governor.cpp
     test_policy_store.cpp
     ../src/config.cpp
+    ../src/dashd/http.cpp
 )
 
 target_include_directories(unit_tests PRIVATE ../include)

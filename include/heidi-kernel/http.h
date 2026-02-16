@@ -33,10 +33,10 @@ public:
 
     void register_handler(std::string_view path, RequestHandler handler);
     void serve_forever();
+    static HttpRequest parse_request(const std::string& data);
 
 private:
     void handle_client(int client_fd);
-    HttpRequest parse_request(const std::string& data) const;
     std::string format_response(const HttpResponse& resp) const;
 
     std::string address_;

@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <cstring>
+#include <algorithm>
 #include <string>
 #include <strings.h>
 #include <fcntl.h>
@@ -161,27 +162,70 @@ void HttpServer::handle_client(int client_fd) {
     write(client_fd, response.c_str(), response.size());
 }
 
-HttpRequest HttpServer::parse_request(const std::string& data) const {
+HttpRequest HttpServer::parse_request(const std::string& data) {
     HttpRequest req;
 
-    size_t pos = data.find("\r\n\r\n");
-    std::string_view body_view;
-    if (pos != std::string::npos) {
-        body_view = std::string_view(data).substr(pos + 4);
-    }
+    if (data.empty()) return req;
 
-    size_t line_end = data.find("\r\n");
-    if (line_end != std::string::npos) {
-        std::string_view request_line(data.c_str(), line_end);
-        size_t sp1 = request_line.find(' ');
-        size_t sp2 = request_line.find(' ', sp1 + 1);
-        if (sp1 != std::string::npos && sp2 != std::string::npos) {
-            req.method = trim(request_line.substr(0, sp1));
-            req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+    size_t end_headers = data.find("\r\n\r\n");
+    if (end_headers == std::string::npos) return req;
+
+    size_t pos = 0;
+    size_t line_end = data.find("\r\n", pos);
+    if (line_end == std::string::npos || line_end > end_headers) return req;
+
+    // Parse Request Line
+    std::string_view request_line(data.c_str() + pos, line_end - pos);
+    pos = line_end + 2;
+
+    size_t sp1 = request_line.find(' ');
+    if (sp1 == std::string_view::npos) return req;
+
+    size_t sp2 = request_line.find(' ', sp1 + 1);
+    if (sp2 == std::string_view::npos) return req;
+
+    req.method = trim(request_line.substr(0, sp1));
+    req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+
+    // Parse Headers
+    while (pos < end_headers) {
+        line_end = data.find("\r\n", pos);
+        if (line_end == std::string::npos || line_end > end_headers) break;
+
+        std::string_view line(data.c_str() + pos, line_end - pos);
+        pos = line_end + 2;
+
+        size_t colon = line.find(':');
+        if (colon != std::string_view::npos) {
+            std::string key(trim(line.substr(0, colon)));
+            std::string value(trim(line.substr(colon + 1)));
+            req.headers[key] = value;
         }
     }
 
-    req.body = body_view;
+    // Determine body length
+    size_t content_length = 0;
+    for (const auto& [k, v] : req.headers) {
+        if (strcasecmp(k.c_str(), "Content-Length") == 0) {
+            try {
+                content_length = std::stoul(v);
+            } catch (...) {
+                content_length = 0;
+            }
+            break;
+        }
+    }
+
+    // Extract body
+    size_t body_start = end_headers + 4;
+    if (body_start < data.size()) {
+        size_t available = data.size() - body_start;
+        size_t to_take = std::min(available, content_length);
+        if (to_take > 0) {
+            req.body = std::string_view(data).substr(body_start, to_take);
+        }
+    }
+
     return req;
 }
 
