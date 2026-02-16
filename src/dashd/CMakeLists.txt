@@ -1,4 +1,4 @@
-add_executable(heidi-dashd STATIC
+add_executable(heidi-dashd
     main.cpp
     http.cpp
 )

@@ -3,16 +3,18 @@
 #include <cstdlib>
 #include <cstring>
 #include <csignal>
+#include <mutex>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <unistd.h>
 #include <thread>
+#include <poll.h>
 
 #include "heidi-kernel/http.h"
 
 namespace {
 
 std::sig_atomic_t g_running = 1;
+std::mutex g_status_mutex;
 std::string g_kernel_status = "{\"error\":\"not connected\"}";
 
 void signal_handler(int) {
@@ -27,7 +29,7 @@ std::string query_kernel_status() {
 
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
-        return "{\"error\":\"socket failed\"}";
+        return "{\"error\":\"socket_failed\"}";
     }
 
     struct sockaddr_un addr;
@@ -37,18 +39,29 @@ std::string query_kernel_status() {
 
     if (connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
         close(fd);
-        return "{\"error\":\"kernel not running\"}";
+        return "{\"error\":\"kernel_not_running\"}";
     }
 
     const char* request = "STATUS\n";
-    write(fd, request, strlen(request));
+    ssize_t w = write(fd, request, strlen(request));
+    if (w < 0) {
+        close(fd);
+        return "{\"error\":\"write_failed\"}";
+    }
+
+    struct pollfd pfd = {fd, POLLIN, 0};
+    int r = poll(&pfd, 1, 1000);
+    if (r <= 0) {
+        close(fd);
+        return "{\"error\":\"timeout\"}";
+    }
 
     char buf[4096];
     ssize_t n = read(fd, buf, sizeof(buf) - 1);
     close(fd);
 
     if (n <= 0) {
-        return "{\"error\":\"no response\"}";
+        return "{\"error\":\"no_response\"}";
     }
     buf[n] = '\0';
     return std::string(buf, n);
@@ -56,7 +69,11 @@ std::string query_kernel_status() {
 
 void poll_kernel_status() {
     while (g_running) {
-        g_kernel_status = query_kernel_status();
+        std::string status = query_kernel_status();
+        {
+            std::lock_guard<std::mutex> lock(g_status_mutex);
+            g_kernel_status = status;
+        }
         std::this_thread::sleep_for(std::chrono::seconds{1});
     }
 }
@@ -73,8 +90,16 @@ int main(int argc, char* argv[]) {
 
     server.register_handler("/api/status", [](const heidi::HttpRequest& req) {
         heidi::HttpResponse resp;
+        std::string status;
+        {
+            std::lock_guard<std::mutex> lock(g_status_mutex);
+            status = g_kernel_status;
+        }
         resp.status_code = 200;
-        resp.body = g_kernel_status;
+        if (status.find("error") != std::string::npos) {
+            resp.status_code = 503;
+        }
+        resp.body = status;
         return resp;
     });
 
@@ -84,7 +109,13 @@ int main(int argc, char* argv[]) {
         resp.headers["Content-Type"] = "text/html";
         resp.body = R"(<!DOCTYPE html>
 <html>
-<head><title>Heidi Kernel Dashboard</title></head>
+<head>
+<title>Heidi Kernel Dashboard</title>
+<style>
+body { font-family: monospace; padding: 20px; }
+#status { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+</style>
+</head>
 <body>
 <h1>Kernel Status</h1>
 <pre id="status">Loading...</pre>

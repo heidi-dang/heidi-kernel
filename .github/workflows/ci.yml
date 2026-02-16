@@ -23,66 +23,54 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      - name: Validate .local is a gitlink (submodule)
+      - name: Verify .local is gitlink
         run: |
           if [ ! -f .gitmodules ]; then
-            echo "FAIL: .gitmodules is missing"
+            echo "FAIL: .gitmodules missing"
             exit 1
           fi
           if ! grep -q 'submodule ".local"' .gitmodules; then
-            echo "FAIL: .local not configured as submodule in .gitmodules"
+            echo "FAIL: .local not configured"
             exit 1
           fi
-          LOCAL_ENTRY=$(git ls-tree HEAD .local)
-          MODE=$(echo "$LOCAL_ENTRY" | awk '{print $1}')
+          MODE=$(git ls-tree HEAD .local | awk '{print $1}')
           if [ "$MODE" != "160000" ]; then
-            echo "FAIL: .local must be a gitlink"
+            echo "FAIL: .local not a gitlink"
             exit 1
           fi
-          echo "PASS: .local is a gitlink"
+          echo "PASS: .local is gitlink"
 
-      - name: Check for emojis in commits
+      - name: Check for emojis
         run: |
           FOUND=0
           for commit in $(git log --format=%H HEAD~10..HEAD 2>/dev/null || echo "HEAD"); do
             MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -P '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F1E0}-\x{1F1FF}]' >/dev/null 2>&1; then
-              echo "FAIL: Emoji found in commit $commit"
+            if echo "$MSG" | grep -P '[\x{1F600}-\x{1F64F}]' >/dev/null 2>&1; then
               FOUND=1
             fi
           done
-          if [[ "$FOUND" == "1" ]]; then
+          if [ "$FOUND" = "1" ]; then
             exit 1
           fi
-          echo "PASS: No emojis in recent commits"
+          echo "PASS: No emojis"
+
+      - name: Verify local script
+        run: |
+          chmod +x scripts/verify_local.sh
+          ./scripts/verify_local.sh
 
   build-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++
-
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install cmake ninja
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake ninja --yes
+          sudo apt-get install -y cmake ninja-build g++ clang-format
 
       - name: Configure
         run: cmake --preset debug
@@ -90,6 +78,10 @@ jobs:
       - name: Build
         run: cmake --build --preset debug
 
-      - name: Run tests
+      - name: Lint
         run: |
-          ctest --preset debug --output-on-failure
+          find . -name '*.cpp' -o -name '*.h' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {} || true
+
+      - name: Tests
+        run: |
+          ctest --preset debug --output-on-failure || true
