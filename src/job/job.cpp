@@ -1,5 +1,6 @@
 #include "heidi-kernel/job.h"
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <chrono>
