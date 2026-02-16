@@ -20,7 +20,7 @@ echo "=== Local Governance Verification ==="
 
 # Gate 1: .local must be a gitlink (submodule)
 echo "Checking .local is a gitlink..."
-MODE=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $1}')
+MODE=$(git ls-tree HEAD .local 2>/dev/null | awk '{print $1}')
 if [[ "$MODE" != "160000" ]]; then
   fail ".local must be a gitlink (submodule), not a regular directory. Found mode: $MODE"
 fi

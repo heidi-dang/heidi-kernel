@@ -11,11 +11,6 @@ include(GNUInstallDirs)
 
 add_subdirectory(src)
 
-add_executable(heidi-kernel)
-add_subdirectory(app)
-
-install(TARGETS heidi-kernel DESTINATION ${CMAKE_INSTALL_BINDIR})
-
 if(ENABLE_TESTS)
     enable_testing()
     add_subdirectory(tests)
