@@ -14,3 +14,5 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+add_subdirectory(src/tools)

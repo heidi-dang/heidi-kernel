@@ -12,5 +12,7 @@ target_include_directories(heidi-kernel-lib
 
 target_compile_options(heidi-kernel-lib PRIVATE -Wall -Wextra -Wpedantic)
 
+add_subdirectory(ipc)
 add_subdirectory(kernel)
 add_subdirectory(dashd)
+add_subdirectory(daemon)
