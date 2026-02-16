@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Governance gate
+        run: |
+          chmod +x scripts/governance-gate.sh
+          ./scripts/governance-gate.sh
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang clang-tidy clang-format
+
+      - name: Configure + Build (Debug)
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug
+
+      - name: Lint (format + tidy where available)
+        run: |
+          chmod +x scripts/lint.sh
+          ./scripts/lint.sh
+
+      - name: Tests
+        run: |
+          chmod +x scripts/test.sh
+          ./scripts/test.sh
