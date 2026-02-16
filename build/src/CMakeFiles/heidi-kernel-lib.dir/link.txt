@@ -1,0 +1,2 @@
+/usr/bin/ar qc libheidi-kernel-lib.a "CMakeFiles/heidi-kernel-lib.dir/logger.cpp.o" "CMakeFiles/heidi-kernel-lib.dir/result.cpp.o" "CMakeFiles/heidi-kernel-lib.dir/event_loop.cpp.o" "CMakeFiles/heidi-kernel-lib.dir/config.cpp.o" "CMakeFiles/heidi-kernel-lib.dir/common/status.cpp.o"
+/usr/bin/ranlib libheidi-kernel-lib.a

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG "CMakeFiles/heidi-kerneld.dir/daemon/main.cpp.o" -o heidi-kerneld  libheidi-kernel-lib.a 

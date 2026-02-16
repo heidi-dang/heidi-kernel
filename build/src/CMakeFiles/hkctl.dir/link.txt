@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/hkctl.dir/tools/hkctl.cpp.o -o hkctl  libheidi-kernel-lib.a 

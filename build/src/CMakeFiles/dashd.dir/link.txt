@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/dashd.dir/dashd/main.cpp.o -o dashd  libheidi-kernel-lib.a 

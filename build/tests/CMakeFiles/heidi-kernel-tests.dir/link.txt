@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG "CMakeFiles/heidi-kernel-tests.dir/test_logger.cpp.o" "CMakeFiles/heidi-kernel-tests.dir/test_result.cpp.o" "CMakeFiles/heidi-kernel-tests.dir/test_event_loop.cpp.o" -o heidi-kernel-tests  ../_deps/catch2-build/src/libCatch2Main.a ../src/libheidi-kernel-lib.a ../_deps/catch2-build/src/libCatch2.a 
