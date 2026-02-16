@@ -2,6 +2,8 @@
 
 #include <arpa/inet.h>
 #include <cstring>
+#include <string>
+#include <strings.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -69,14 +71,73 @@ void HttpServer::serve_forever() {
 }
 
 void HttpServer::handle_client(int client_fd) {
-    char buf[4096];
-    ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
-    if (n <= 0) {
+    std::string request_buffer;
+    char temp_buf[4096];
+    ssize_t n;
+    size_t body_start = std::string::npos;
+    size_t content_length = 0;
+    bool headers_parsed = false;
+    const size_t MAX_REQUEST_SIZE = 1024 * 1024; // 1 MB
+
+    while (true) {
+        if (request_buffer.size() >= MAX_REQUEST_SIZE) {
+            const char* resp_413 = "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\n\r\n";
+            write(client_fd, resp_413, strlen(resp_413));
+            return;
+        }
+
+        n = read(client_fd, temp_buf, sizeof(temp_buf));
+        if (n <= 0) {
+            break;
+        }
+        request_buffer.append(temp_buf, n);
+
+        if (!headers_parsed) {
+            body_start = request_buffer.find("\r\n\r\n");
+            if (body_start != std::string::npos) {
+                body_start += 4; // Skip \r\n\r\n
+                headers_parsed = true;
+
+                // Find Content-Length
+                size_t pos = 0;
+                while (pos < body_start) {
+                    size_t line_end = request_buffer.find("\r\n", pos);
+                    if (line_end == std::string::npos || line_end >= body_start) break;
+
+                    std::string_view line(request_buffer.c_str() + pos, line_end - pos);
+                    if (line.size() >= 15 && strncasecmp(line.data(), "Content-Length:", 15) == 0) {
+                        size_t val_start = 15;
+                        while (val_start < line.size() && line[val_start] == ' ') val_start++;
+                        if (val_start < line.size()) {
+                            try {
+                                content_length = std::stoul(std::string(line.substr(val_start)));
+                            } catch (...) {
+                                content_length = 0;
+                            }
+                        }
+                        break;
+                    }
+                    pos = line_end + 2;
+                }
+            }
+        }
+
+        if (headers_parsed) {
+            if (request_buffer.size() >= body_start + content_length) {
+                break;
+            }
+        } else if (n < (ssize_t)sizeof(temp_buf)) {
+             // If we read less than buffer size and headers not found, maybe end of stream?
+             // But read returns 0 on EOF. n < sizeof(temp_buf) just means data is available.
+             // We should keep reading until headers found or EOF.
+        }
+    }
+
+    if (request_buffer.empty()) {
         return;
     }
-    buf[n] = '\0';
 
-    HttpRequest req = parse_request(std::string(buf, n));
+    HttpRequest req = parse_request(request_buffer);
 
     HttpResponse resp;
     resp.headers["Content-Type"] = "application/json";
