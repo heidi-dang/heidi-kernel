@@ -6,7 +6,7 @@
 #include <functional>
 #include <vector>
 #include <map>
-#include <string>
+#include <csignal>
 
 namespace heidi {
 
@@ -32,7 +32,7 @@ public:
     ~HttpServer();
 
     void register_handler(std::string_view path, RequestHandler handler);
-    void serve_forever();
+    void serve_forever(volatile std::sig_atomic_t* shutdown_flag = nullptr);
 
 private:
     void handle_client(int client_fd);

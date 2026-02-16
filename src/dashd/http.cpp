@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string>
+#include <poll.h>
+#include <cerrno>
 
 namespace {
 
@@ -38,7 +40,7 @@ void HttpServer::register_handler(std::string_view path, RequestHandler handler)
     handlers_.emplace_back(std::string(path), std::move(handler));
 }
 
-void HttpServer::serve_forever() {
+void HttpServer::serve_forever(volatile std::sig_atomic_t* shutdown_flag) {
     server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd_ < 0) {
         return;
@@ -61,13 +63,25 @@ void HttpServer::serve_forever() {
 
     listen(server_fd_, 10);
 
-    while (true) {
-        int client_fd = accept(server_fd_, nullptr, nullptr);
-        if (client_fd < 0) {
+    struct pollfd pfd = {server_fd_, POLLIN, 0};
+
+    while (!shutdown_flag || *shutdown_flag) {
+        int ret = poll(&pfd, 1, 200); // 200ms timeout
+
+        if (ret < 0) {
+            if (errno == EINTR) continue;
             break;
         }
-        handle_client(client_fd);
-        close(client_fd);
+
+        if (ret > 0 && (pfd.revents & POLLIN)) {
+            int client_fd = accept(server_fd_, nullptr, nullptr);
+            if (client_fd < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
+                break;
+            }
+            handle_client(client_fd);
+            close(client_fd);
+        }
     }
 }
 

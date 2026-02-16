@@ -214,7 +214,7 @@ int main(int argc, char* argv[]) {
     printf("dashd listening on http://127.0.0.1:7778\n");
     fflush(stdout);
 
-    server.serve_forever();
+    server.serve_forever(&g_running);
 
     poller.join();
     return 0;
