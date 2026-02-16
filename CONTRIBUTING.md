@@ -43,6 +43,20 @@ git submodule update --init --recursive
 
 1. Commit + push to private `.local` repo
 2. Bump the `.local` submodule pointer in public repo:
+   - Edit `.local` (it is a file, not a directory) to point to the new commit
+   - Commit the pointer change in the public repo
+
+## C++ standards (mandatory)
+
+heidi-kernel uses a strict C++23 ruleset for a long-running daemon. See `.local/RULES_CPP.md` for details:
+- Compiler: clang, C++23
+- Warnings as errors
+- No exceptions, prefer `std::expected`
+- Bounded resources everywhere
+- Fixed small thread pool
+- RAII for all resources
+
+## PR writing rule (strict)
 
 ```bash
 cd .local
