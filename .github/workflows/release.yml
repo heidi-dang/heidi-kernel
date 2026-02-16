@@ -26,16 +26,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Configure
+        if: hashFiles('CMakeLists.txt') != ''
         run: cmake --preset release
 
       - name: Build
+        if: hashFiles('CMakeLists.txt') != ''
         run: cmake --build --preset release
 
       - name: Package (Linux/macOS)
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows-latest' && hashFiles('CMakeLists.txt') != ''
         run: |
           mkdir -p ${{ matrix.artifact }}
           cp build/release/heidi-kernel ${{ matrix.artifact }}/ 2>/dev/null || true
@@ -44,7 +46,7 @@ jobs:
           tar czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}/
 
       - name: Package (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && hashFiles('CMakeLists.txt') != ''
         run: |
           mkdir -p ${{ matrix.artifact }}
           copy build\release\heidi-kernel.exe ${{ matrix.artifact }}\ 2>/dev/null || echo "No binary found"
@@ -53,6 +55,7 @@ jobs:
           powershell -Command "Compress-Archive -Path ${{ matrix.artifact }} -DestinationPath ${{ matrix.artifact }}.zip"
 
       - name: Upload Release Asset
+        if: hashFiles('CMakeLists.txt') != ''
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
