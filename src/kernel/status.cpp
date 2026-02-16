@@ -1,5 +1,6 @@
 #include "heidi-kernel/status.h"
 
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -16,16 +17,33 @@ namespace {
 constexpr std::string_view kVersion = "0.1.0";
 
 uint64_t get_rss_kb() {
-    FILE* f = fopen("/proc/self/statm", "r");
-    if (!f) {
+    static int fd = ::open("/proc/self/statm", O_RDONLY | O_CLOEXEC);
+    if (fd == -1) {
         return 0;
     }
-    long rss = 0;
-    if (fscanf(f, "%*ld %ld", &rss) != 1) {
-        fclose(f);
+
+    char buffer[64];
+    ssize_t bytes_read = ::pread(fd, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_read <= 0) {
         return 0;
     }
-    fclose(f);
+    buffer[bytes_read] = '\0';
+
+    char* p = buffer;
+    // Format: size resident shared ...
+    // Skip size
+    while (*p && !std::isspace(*p))
+        p++;
+    // Skip delimiter
+    while (*p && std::isspace(*p))
+        p++;
+
+    if (!*p) {
+        return 0;
+    }
+
+    char* end;
+    long rss = std::strtol(p, &end, 10);
     return static_cast<uint64_t>(rss * 4096 / 1024);
 }
 
