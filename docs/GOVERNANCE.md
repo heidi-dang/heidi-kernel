@@ -36,6 +36,51 @@ The following checks run automatically on every PR:
 - No build artifacts committed
 - All CI checks must be green before merge
 
+## Build System
+
+### Supported Compilers
+
+Two official presets are provided:
+
+#### Option A: Clang (CI Default)
+```bash
+# Requires: clang, clang++, ninja
+# Ubuntu/Debian: sudo apt-get install clang ninja-build
+# macOS: brew install llvm ninja
+# Windows: choco install llvm ninja
+
+cmake --preset debug
+cmake --build --preset debug
+ctest --preset debug --output-on-failure
+```
+
+#### Option B: GCC (Local Development)
+```bash
+# Requires: gcc, g++, ninja
+# Ubuntu/Debian: sudo apt-get install build-essential ninja-build
+# (usually pre-installed)
+
+cmake --preset debug-gcc
+cmake --build --preset debug-gcc
+ctest --preset debug-gcc --output-on-failure
+```
+
+### Verification
+
+Always verify your changes locally before pushing:
+```bash
+# 1. Build
+rm -rf build/debug-gcc
+cmake --preset debug-gcc
+cmake --build --preset debug-gcc
+
+# 2. Test
+ctest --preset debug-gcc --output-on-failure
+
+# 3. Governance
+./scripts/verify_local.sh
+```
+
 ## Branch Protection
 
 Main branch requires:
