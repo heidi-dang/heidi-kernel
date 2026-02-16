@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/heidi-kernel.dir/__/__/app/main.cpp.o" -o heidi-kernel  libheidi-kernel-core.a ../libheidi-kernel-lib.a -lpthread
