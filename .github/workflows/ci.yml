@@ -56,6 +56,14 @@ jobs:
           fi
           echo "PASS: No emojis in recent commits"
 
+      - name: Check for secret-like patterns
+        run: |
+          if git ls-files -z | xargs -0 grep -iE '(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{22,}|_[A-Z_]*TOKEN|_[A-Z_]*KEY|aws_access_key|aws_secret_key)' 2>/dev/null | grep -v '.gitmodules'; then
+            echo "FAIL: Secret-like pattern found in repository"
+            exit 1
+          fi
+          echo "PASS: No obvious secrets found"
+
   build-test:
     strategy:
       fail-fast: false
@@ -66,7 +74,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          persist-credentials: false
+
+      - name: Initialize submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
