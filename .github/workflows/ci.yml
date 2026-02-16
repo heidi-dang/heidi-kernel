@@ -24,6 +24,10 @@ jobs:
 
       - name: Validate .local is a gitlink (submodule)
         run: |
+          echo "DEBUG: Listing root tree..."
+          git ls-tree HEAD
+          echo "DEBUG: Checking .local..."
+          git ls-tree HEAD .local || echo "DEBUG: .local not found directly"
           # Check .gitmodules exists and contains .local submodule
           if [ ! -f .gitmodules ]; then
             echo "FAIL: .gitmodules is missing"
@@ -35,6 +39,7 @@ jobs:
           fi
           # Check .local entry in tree is commit (gitlink mode 160000)
           MODE=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $1}')
+          echo "DEBUG: MODE = $MODE"
           if [ "$MODE" != "160000" ]; then
             echo "FAIL: .local must be a gitlink (submodule), not a regular directory. Found mode: $MODE"
             exit 1
