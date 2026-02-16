@@ -103,17 +103,24 @@ jobs:
       - name: Check for emojis in commits
         run: |
           FOUND=0
-          for commit in $(git log --format=%H HEAD~5..HEAD 2>/dev/null || echo "HEAD"); do
-            MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-              echo "FAIL: Emoji found in commit $commit: $MSG"
-              FOUND=1
+          # For PRs: check commits not on main
+          # For push to main: skip (already checked before merge)
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse origin/main)
+            for commit in $(git log --format=%H "$BASE"..HEAD 2>/dev/null || echo ""); do
+              MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
+              if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
+                echo "FAIL: Emoji found in commit $commit: $MSG"
+                FOUND=1
+              fi
+            done
+            if [[ "$FOUND" == "1" ]]; then
+              exit 1
             fi
-          done
-          if [[ "$FOUND" == "1" ]]; then
-            exit 1
+            echo "PASS: No emojis in new commits"
+          else
+            echo "SKIP: Emoji check only runs on PRs"
           fi
-          echo "PASS: No emojis in recent commits"
 
       - name: Governance gate (local verify)
         run: |
