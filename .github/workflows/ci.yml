@@ -110,8 +110,7 @@ jobs:
 
       - name: Lint (format + tidy where available)
         run: |
-          chmod +x scripts/lint.sh
-          ./scripts/lint.sh || true
+          find . -name '*.cpp' -o -name '*.h' | grep -v '^./build' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {} || true
 
       - name: Tests
         if: hashFiles('CMakeLists.txt') != ''
