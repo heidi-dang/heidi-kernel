@@ -59,8 +59,21 @@ int main(int argc, char* argv[]) {
         } else if (command == "status") {
             std::string response = send_request(socket_path, "status\n");
             std::cout << response;
+        } else if (command == "metrics") {
+            if (argc > 2 && std::string(argv[2]) == "latest") {
+                std::string response = send_request(socket_path, "metrics latest\n");
+                std::cout << response;
+            } else if (argc > 3 && std::string(argv[2]) == "tail") {
+                std::string n_str = argv[3];
+                std::string response = send_request(socket_path, "metrics tail " + n_str + "\n");
+                std::cout << response;
+            } else {
+                std::cout << "Usage: heidi-kernelctl metrics latest|tail <n> [--socket <path>]" << std::endl;
+                return 1;
+            }
         } else {
             std::cout << "Unknown command: " << command << std::endl;
+            std::cout << "Available: ping, status, metrics latest, metrics tail <n>" << std::endl;
             return 1;
         }
         return 0;

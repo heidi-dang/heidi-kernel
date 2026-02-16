@@ -47,8 +47,7 @@ UnixSocketServer::~UnixSocketServer() {
 }
 
 void UnixSocketServer::serve_forever() {
-    running_ = true;
-    while (running_) {
+    while (true) {
         int client_fd = accept(server_fd_, nullptr, nullptr);
         if (client_fd < 0) continue;
         handle_client(client_fd);
@@ -57,7 +56,6 @@ void UnixSocketServer::serve_forever() {
 }
 
 void UnixSocketServer::stop() {
-    running_ = false;
     if (server_fd_ >= 0) {
         close(server_fd_);
         server_fd_ = -1;
@@ -73,17 +71,15 @@ void UnixSocketServer::handle_client(int client_fd) {
 
     IpcMessage request = IpcProtocol::deserialize(buffer);
     IpcMessage response;
-
-    if (request.type == "ping") {
-        response.type = "pong";
-    } else if (request.type == "status") {
-        response.type = "status";
+    
+    if (request_handler_) {
+        std::string resp_str = request_handler_(request.type);
+        write(client_fd, resp_str.c_str(), resp_str.size());
     } else {
         response.type = "error";
+        std::string resp_str = IpcProtocol::serialize(response);
+        write(client_fd, resp_str.c_str(), resp_str.size());
     }
-
-    std::string resp_str = IpcProtocol::serialize(response);
-    write(client_fd, resp_str.c_str(), resp_str.size());
 }
 
 } // namespace heidi

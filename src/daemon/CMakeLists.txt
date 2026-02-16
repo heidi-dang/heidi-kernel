@@ -3,6 +3,7 @@ add_executable(heidi-kernel main.cpp daemon.cpp)
 target_link_libraries(heidi-kernel
     PRIVATE
         heidi-ipc
+        heidi-metrics
         heidi-kernel-lib
 )
 

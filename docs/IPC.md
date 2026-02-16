@@ -1,14 +1,12 @@
 # IPC Protocol
 
-The heidi-kernel daemon uses Unix domain sockets for IPC. Messages are length-prefixed JSON.
-
-## Message Format
-- 4 bytes: big-endian uint32 length of JSON payload
-- JSON payload: UTF-8 encoded
+The heidi-kernel daemon uses Unix domain sockets for IPC. Messages are line-delimited text.
 
 ## Request Types
-- `{"type": "ping"}` -> `{"type": "pong"}`
-- `{"type": "status"}` -> `{"type": "status", "version": "0.1.0", "uptime": 123, "queue_depth": 0}`
+- `ping` -> `pong`
+- `status` -> multiline status with version, cpu, mem
+- `metrics latest` -> latest cpu/mem metrics
+- `metrics tail <n>` -> last n metrics from disk
 
-## Error Codes
-- `{"type": "error", "code": 400, "message": "invalid request"}`
+## Response Format
+Multiline text with key: value pairs or CSV for tail.

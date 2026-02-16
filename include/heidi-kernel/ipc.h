@@ -19,17 +19,21 @@ public:
 
 class UnixSocketServer {
 public:
-    explicit UnixSocketServer(const std::string& path);
+    UnixSocketServer(const std::string& path);
     ~UnixSocketServer();
 
     void serve_forever();
     void stop();
+    
+    void set_request_handler(std::function<std::string(const std::string&)> handler) {
+        request_handler_ = handler;
+    }
 
 private:
     void handle_client(int client_fd);
     std::string path_;
     int server_fd_ = -1;
-    bool running_ = false;
+    std::function<std::string(const std::string&)> request_handler_;
 };
 
 } // namespace heidi
