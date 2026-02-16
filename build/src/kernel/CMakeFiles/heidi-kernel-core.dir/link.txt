@@ -1,2 +1,0 @@
-/usr/bin/ar qc libheidi-kernel-core.a "CMakeFiles/heidi-kernel-core.dir/main.cpp.o" "CMakeFiles/heidi-kernel-core.dir/status.cpp.o"
-/usr/bin/ranlib libheidi-kernel-core.a

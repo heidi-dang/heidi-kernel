@@ -129,6 +129,7 @@ std::string HttpServer::format_response(const HttpResponse& resp) const {
     std::string status_code_str = std::to_string(resp.status_code);
     std::string content_length_str = std::to_string(resp.body.size());
 
+    // Estimated size includes protocol overhead, status line, headers, and body
     size_t estimated_size = 32; // "HTTP/1.1 " + " " + "\r\n" + "Content-Length: " + "\r\n\r\n" approx
     estimated_size += status_code_str.size();
     estimated_size += resp.status_text.size();
