@@ -77,6 +77,7 @@ void Daemon::run() {
                 case JobStatus::COMPLETED: oss << "completed"; break;
                 case JobStatus::FAILED: oss << "failed"; break;
                 case JobStatus::CANCELLED: oss << "cancelled"; break;
+                case JobStatus::PROC_LIMIT: oss << "proc_limit"; break;
             }
             oss << "\nexit_code: " << job->exit_code << "\n";
             if (!job->output.empty()) {
@@ -98,6 +99,7 @@ void Daemon::run() {
                     case JobStatus::COMPLETED: oss << "completed"; break;
                     case JobStatus::FAILED: oss << "failed"; break;
                     case JobStatus::CANCELLED: oss << "cancelled"; break;
+                    case JobStatus::PROC_LIMIT: oss << "proc_limit"; break;
                 }
                 oss << "," << j->exit_code << "\n";
             }
@@ -125,7 +127,18 @@ void Daemon::run() {
     
     std::cout << "Daemon started on " << socket_path_ << std::endl;
     
+    auto last_tick = std::chrono::steady_clock::now();
+    
     while (running_ && g_running) {
+        // Run tick every 100ms for job progression
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_tick).count() >= 100) {
+            auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            job_runner_->tick(now_ms);
+            last_tick = now;
+        }
+        
         server.serve_forever();
     }
     
