@@ -12,6 +12,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  governance:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check PR title/body for emojis
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          BODY="${{ github.event.pull_request.body }}"
+          if echo "$TITLE" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
+            echo "FAIL: Emoji found in PR title"
+            exit 1
+          fi
+          if echo "$BODY" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
+            echo "FAIL: Emoji found in PR body"
+            exit 1
+          fi
+          echo "PASS: No emojis in PR title/body"
+
+      - name: Check for bidi control characters
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          BODY="${{ github.event.pull_request.body }}"
+          CONTENT="$TITLE $BODY"
+          if echo "$CONTENT" | grep -q $'[\x{202A}-\x{202E}\x{2066}-\x{2069}]' 2>/dev/null; then
+            echo "FAIL: Bidi control characters found in PR"
+            exit 1
+          fi
+          echo "PASS: No bidi control chars"
+
+      - name: Check for build artifacts
+        run: |
+          ARTEFACTS=$(git diff --name-only origin/main...HEAD | grep -E '\.(o|a|d|obj|pdb|exe)$|^build/' || true)
+          if [[ -n "$ARTEFACTS" ]]; then
+            echo "FAIL: Build artifacts found in PR:"
+            echo "$ARTEFACTS"
+            exit 1
+          fi
+          echo "PASS: No build artifacts"
+
   build-test:
     strategy:
       matrix:
