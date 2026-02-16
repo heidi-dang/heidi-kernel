@@ -75,8 +75,8 @@ void StatusSocket::bind() {
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, socket_path_.c_str(), sizeof(addr.sun_path) - 1);
 
-    if (bind(server_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-        close(server_fd_);
+    if (::bind(server_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        ::close(server_fd_);
         server_fd_ = -1;
         return;
     }
@@ -84,7 +84,7 @@ void StatusSocket::bind() {
     chmod(socket_path_.c_str(), 0666);
 
     if (listen(server_fd_, 5) < 0) {
-        close(server_fd_);
+        ::close(server_fd_);
         server_fd_ = -1;
     }
 }
@@ -92,7 +92,7 @@ void StatusSocket::bind() {
 void StatusSocket::close() {
     stop_requested_ = true;
     if (server_fd_ >= 0) {
-        close(server_fd_);
+        ::close(server_fd_);
         server_fd_ = -1;
     }
     unlink(socket_path_.c_str());
@@ -129,7 +129,7 @@ void StatusSocket::serve_forever() {
             continue;
         }
         handle_client(client_fd);
-        close(client_fd);
+        ::close(client_fd);
     }
 }
 

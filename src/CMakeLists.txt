@@ -3,8 +3,6 @@ add_library(heidi-kernel-lib STATIC
     result.cpp
     event_loop.cpp
     config.cpp
-    status.cpp
-    http.cpp
 )
 
 target_include_directories(heidi-kernel-lib
