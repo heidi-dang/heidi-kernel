@@ -42,7 +42,11 @@ jobs:
           TITLE="${{ github.event.pull_request.title }}"
           BODY="${{ github.event.pull_request.body }}"
           CONTENT="$TITLE $BODY"
-          if echo "$CONTENT" | grep -q $'[\x{202A}-\x{202E}\x{2066}-\x{2069}]' 2>/dev/null; then
+          # Check for bidi control characters using UTF-8 byte sequences:
+          # U+202A-LRE: \xE2\x80\xAA, U+202B-RLE: \xE2\x80\xAB, U+202C-PDF: \xE2\x80\xAC
+          # U+202D-LRO: \xE2\x80\xAD, U+202E-RLO: \xE2\x80\xAE, U+2066-LRI: \xE2\x81\xA6
+          # U+2067-RLI: \xE2\x81\xA7, U+2068-FSI: \xE2\x81\xA8, U+2069-PDI: \xE2\x81\xA9
+          if echo "$CONTENT" | grep -qE $'(\xe2\x80[\xaa-\xae]|\xe2\x81[\xa6-\xa9])' 2>/dev/null; then
             echo "FAIL: Bidi control characters found in PR"
             exit 1
           fi
