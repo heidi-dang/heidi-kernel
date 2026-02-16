@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector>
 #include <map>
+#include <string>
 
 namespace heidi {
 
@@ -32,10 +33,11 @@ public:
     void register_handler(std::string_view path, RequestHandler handler);
     void serve_forever();
 
+    static HttpRequest parse_request(std::string_view data);
+    static std::string format_response(const HttpResponse& resp);
+
 private:
     void handle_client(int client_fd);
-    HttpRequest parse_request(const std::string& data) const;
-    std::string format_response(const HttpResponse& resp) const;
 
     std::string address_;
     uint16_t port_;

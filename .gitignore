@@ -1,3 +1,4 @@
-# Secrets
+build/
+_deps/
 .local/secrets/
 !.local/secrets/_template.md
