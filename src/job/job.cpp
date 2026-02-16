@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <queue>
 #include <vector>
+#include <algorithm>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>

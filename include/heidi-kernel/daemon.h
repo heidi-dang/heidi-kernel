@@ -32,15 +32,15 @@ private:
     void sampling_thread();
     void monitor_loop();
     void handle_monitor_tick();
-    
+
     std::string socket_path_;
     std::string state_dir_;
     bool running_ = false;
-    
+
     mutable std::mutex metrics_mutex_;
     SystemMetrics latest_metrics_;
     MetricsHistory* history_;
-    
+
     std::thread sampler_thread_;
     std::condition_variable cv_;
     std::mutex cv_mutex_;
