@@ -1,3 +1,5 @@
+#include <string>
+
 #include "heidi-kernel/http.h"
 
 #include <arpa/inet.h>
@@ -124,15 +126,37 @@ HttpRequest HttpServer::parse_request(const std::string& data) const {
 }
 
 std::string HttpServer::format_response(const HttpResponse& resp) const {
-    std::string resp_str = "HTTP/1.1 ";
-    resp_str += std::to_string(resp.status_code) + " " + std::string(resp.status_text) + "\r\n";
+    std::string status_code_str = std::to_string(resp.status_code);
+    std::string content_length_str = std::to_string(resp.body.size());
+
+    size_t estimated_size = 32; // "HTTP/1.1 " + " " + "\r\n" + "Content-Length: " + "\r\n\r\n" approx
+    estimated_size += status_code_str.size();
+    estimated_size += resp.status_text.size();
+    for (const auto& [key, value] : resp.headers) {
+        estimated_size += key.size() + value.size() + 4;
+    }
+    estimated_size += content_length_str.size();
+    estimated_size += resp.body.size();
+
+    std::string resp_str;
+    resp_str.reserve(estimated_size);
+
+    resp_str += "HTTP/1.1 ";
+    resp_str += status_code_str;
+    resp_str += " ";
+    resp_str += resp.status_text;
+    resp_str += "\r\n";
 
     for (const auto& [key, value] : resp.headers) {
-        resp_str += key + ": " + value + "\r\n";
+        resp_str += key;
+        resp_str += ": ";
+        resp_str += value;
+        resp_str += "\r\n";
     }
 
-    resp_str += "Content-Length: " + std::to_string(resp.body.size()) + "\r\n";
-    resp_str += "\r\n";
+    resp_str += "Content-Length: ";
+    resp_str += content_length_str;
+    resp_str += "\r\n\r\n";
     resp_str += resp.body;
 
     return resp_str;
