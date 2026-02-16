@@ -24,23 +24,25 @@ pass ".local is a gitlink (submodule)"
 # Gate 2: Check for emojis in new commits only (not on main)
 echo "Checking for emojis in new commits..."
 FOUND=0
-# Check if we're on a branch with commits not on main
-if git rev-parse --verify origin/main >/dev/null 2>&1; then
-  BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse origin/main)
-  for commit in $(git log --format=%H "$BASE"..HEAD 2>/dev/null || echo ""); do
-    MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-    if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-      warn "Emoji found in commit $commit"
-      FOUND=1
-    fi
-  done
-  if [[ "$FOUND" == "1" ]]; then
-    fail "Emojis found in commits - remove them before pushing"
+# Ensure origin/main exists
+if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+  echo "Fetching origin to get main branch..."
+  if ! git fetch origin main 2>/dev/null; then
+    fail "Cannot fetch origin/main. Run 'git remote add origin <url>' and 'git fetch origin main', or ensure you're on a branch with origin configured."
   fi
-  pass "No emojis in new commits"
-else
-  echo "SKIP: No origin/main to compare against"
 fi
+BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse origin/main)
+for commit in $(git log --format=%H "$BASE"..HEAD 2>/dev/null || echo ""); do
+  MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
+  if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
+    warn "Emoji found in commit $commit"
+    FOUND=1
+  fi
+done
+if [[ "$FOUND" == "1" ]]; then
+  fail "Emojis found in commits - remove them before pushing"
+fi
+pass "No emojis in new commits"
 
 # Gate 3: Worklog entry check (if running on a branch with a PR)
 if [[ -n "${GITHUB_ACTOR:-}" ]] && [[ "$GITHUB_ACTOR" != "github-actions" ]]; then
