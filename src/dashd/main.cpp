@@ -226,6 +226,7 @@ int main(int argc, char* argv[]) {
   printf("dashd listening on http://127.0.0.1:7778\n");
   fflush(stdout);
 
+  // Start the server loop, passing the running flag for graceful shutdown
   server.serve_forever(&g_running);
 
   poller.join();
