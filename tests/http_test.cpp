@@ -36,11 +36,6 @@ TEST(HttpServerTest, ParseRequest_Lifetime) {
     HttpRequest req = HttpServer::parse_request(data);
 
     EXPECT_EQ(req.path, "/safe");
-
-    // Note: If we passed a temporary string to parse_request, usage here would be UB.
-    // But since we changed signature to string_view, it forces caller to manage lifetime
-    // of the underlying string data if it comes from a temporary string.
-    // But here 'data' lives until end of scope.
 }
 
 TEST(HttpServerTest, FormatResponse_Simple) {

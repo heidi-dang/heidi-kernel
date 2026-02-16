@@ -1,4 +1,11 @@
-build/
-_deps/
+# Secrets
 .local/secrets/
 !.local/secrets/_template.md
+
+# Build artifacts
+build/
+*.log
+*.o
+*.a
+.cache/
+compile_commands.json

@@ -19,6 +19,18 @@
       }
     },
     {
+      "name": "debug-gcc",
+      "displayName": "Debug (gcc)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug-gcc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "release",
       "displayName": "Release (clang)",
       "generator": "Ninja",
@@ -37,6 +49,10 @@
       "configurePreset": "debug"
     },
     {
+      "name": "debug-gcc",
+      "configurePreset": "debug-gcc"
+    },
+    {
       "name": "release",
       "configurePreset": "release"
     }
@@ -45,6 +61,11 @@
     {
       "name": "debug",
       "configurePreset": "debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "debug-gcc",
+      "configurePreset": "debug-gcc",
       "output": { "outputOnFailure": true }
     }
   ]
