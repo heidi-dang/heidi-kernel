@@ -25,34 +25,53 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - name: Check PR title/body for emojis
-        run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          BODY="${{ github.event.pull_request.body }}"
-          if echo "$TITLE" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-            echo "FAIL: Emoji found in PR title"
-            exit 1
-          fi
-          if echo "$BODY" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-            echo "FAIL: Emoji found in PR body"
-            exit 1
-          fi
-          echo "PASS: No emojis in PR title/body"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check for bidi control characters
+      - name: Check PR title/body for emojis and bidi
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
         run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          BODY="${{ github.event.pull_request.body }}"
-          CONTENT="$TITLE $BODY"
-          # Check for bidi control characters using UTF-8 byte sequences:
-          # U+202A-LRE: \xE2\x80\xAA, U+202B-RLE: \xE2\x80\xAB, U+202C-PDF: \xE2\x80\xAC
-          # U+202D-LRO: \xE2\x80\xAD, U+202E-RLO: \xE2\x80\xAE, U+2066-LRI: \xE2\x81\xA6
-          # U+2067-RLI: \xE2\x81\xA7, U+2068-FSI: \xE2\x81\xA8, U+2069-PDI: \xE2\x81\xA9
-          if echo "$CONTENT" | grep -qE $'(\xe2\x80[\xaa-\xae]|\xe2\x81[\xa6-\xa9])' 2>/dev/null; then
-            echo "FAIL: Bidi control characters found in PR"
-            exit 1
-          fi
-          echo "PASS: No bidi control chars"
+          python3 << 'PYEOF'
+          import os
+          import re
+          import sys
+          
+          title = os.environ.get('TITLE', '')
+          body = os.environ.get('BODY', '')
+          
+          # Emoji pattern: U+1F300 - U+1F6FF (Misc Symbols and Pictographs)
+          # U+1F700 - U+1F77F (Alchemical Symbols)
+          emoji_pattern = re.compile(
+              '[\U0001F300-\U0001F6FF\U0001F700-\U0001F77F'
+              '\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF'
+              '\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F'
+              '\U0001FA70-\U0001FAFF\U0001FB00-\U0001FBFF]'
+          )
+          
+          # Bidi control characters
+          bidi_pattern = re.compile(
+              '[\u202A-\u202E\u2066-\u2069]'
+          )
+          
+          errors = []
+          if emoji_pattern.search(title):
+              errors.append("Emoji found in PR title")
+          if emoji_pattern.search(body):
+              errors.append("Emoji found in PR body")
+          if bidi_pattern.search(title + body):
+              errors.append("Bidi control characters found in PR")
+          
+          if errors:
+              for e in errors:
+                  print(f"FAIL: {e}")
+              sys.exit(1)
+          else:
+              print("PASS: No emojis or bidi control characters in PR title/body")
+          PYEOF
 
       - name: Check for build artifacts
         run: |
@@ -148,7 +167,8 @@ jobs:
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cmake ninja
+          brew install cmake ninja llvm
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
