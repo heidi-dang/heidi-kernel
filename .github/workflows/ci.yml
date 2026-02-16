@@ -10,6 +10,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Submodule pointer gate
+        run: |
+          if ! git diff --name-only | grep -q '^\\.local$'; then
+            echo "FAIL: PR must update .local submodule pointer"
+            echo "Every PR must include a .local submodule pointer update."
+            exit 1
+          fi
+          echo "PASS: .local submodule pointer updated"
 
       - name: Governance gate
         run: |

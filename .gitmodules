@@ -1,0 +1,3 @@
+[submodule ".local"]
+	path = .local
+	url = git@github.com:heidi-dang/heidi-kernel-local.git

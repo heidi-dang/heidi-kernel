@@ -2,40 +2,71 @@
 
 heidi-kernel is a native C++23 runtime daemon for WSL2-first environments. It exists to keep developer workflows stable under load: bounded queues, backpressure, deterministic scheduling, and clean shutdown.
 
+## Project structure
+
+- **Public repo** (`heidi-kernel`): contains source code, CI, scripts, public docs.
+- **Private repo** (`.local` submodule): contains rules, tasks, context, worklogs, acknowledgements.
+
 ## Mandatory onboarding
 
-**Before starting any work, read `./.local/INDEX.md`.**
+**Before starting any work, sync with latest main and read `.local/INDEX.md`.**
 
-First-time contributors must create an acknowledgement file at `./.local/ack/<your_name>.md` using the template in `./.local/ack/_template.md`. PRs may be rejected if this acknowledgement is missing for new developers.
+If you have access to the private `.local` submodule:
+- First-time contributors must create an acknowledgement file at `.local/ack/<your_name>.md`
+- See `.local/SYNC_POLICY.md` for the sync workflow
 
-## Worklog (mandatory per PR)
+## Submodule workflow
 
-Every contributor must add a dated entry to their personal worklog for each PR:
+### Clone once
 
-- File: `.local/worklog/<your_name>.md`
-- Template: `.local/worklog/_template.md`
+```bash
+git clone --recurse-submodules git@github.com:heidi-dang/heidi-kernel.git
+cd heidi-kernel
+```
 
-See `./.local/WORKLOG_RULE.md` for details. CI will fail if no worklog entry is added.
+### Daily start sync
 
-## Non-negotiables (reject PR if violated)
+```bash
+git checkout main
+git pull --rebase origin main
+git submodule update --init --recursive
+```
 
-1. **WSL2-first**: Must build and run on WSL2 Ubuntu.
-2. **Near-zero idle CPU**: No busy loops. Any periodic work must be timer-driven and typically **>= 250ms**.
-3. **Bounded memory**: No unbounded queues/caches. Prefer disk-backed cache over large RAM caches.
-4. **No thread-per-request**: Use a small fixed thread pool and/or event-driven I/O.
-5. **IPC**: Unix domain socket only. Use blocking I/O or epoll-based event loop.
-6. **Backpressure > overload**: Bounded queues everywhere. When full, apply backpressure or fail fast.
-7. **Deterministic under load**: Avoid global locks held across I/O, avoid unbounded retries.
-8. **Clean shutdown**: SIGINT/SIGTERM must stop accepting new work, drain/stop safely, and release resources.
-9. **Process safety**: Only manage/kill processes that are explicitly heidi-managed.
-10. **Minimal dependencies**: Prefer standard library + small header-only libs if needed. No heavy frameworks.
+### Start a feature branch
 
-## Performance budgets
+```bash
+git checkout -b feat/<short-name>
+git submodule update --init --recursive
+```
 
-- **Idle CPU**: near-zero (no polling loops)
-- **Idle RSS**: keep small; justify anything > 50MB
-- **Startup**: fast; no heavy init on boot
-- **Under load**: bounded queues; no unbounded memory growth
+### Update rules/tasks/worklog
+
+1. Commit + push to private `.local` repo
+2. Bump the `.local` submodule pointer in public repo:
+
+```bash
+cd .local
+git checkout main
+git pull --rebase origin main
+# edit files (rules/tasks/worklog)
+git commit -am "chore(local): <summary>"
+git push origin main
+cd ..
+git add .local
+git commit -m "chore(local): bump .local submodule"
+git push -u origin HEAD
+```
+
+### Before opening PR
+
+```bash
+git fetch origin
+git rebase origin/main
+git submodule update --init --recursive
+git status
+```
+
+**Every PR must update the `.local` submodule pointer.**
 
 ## Coding standards
 
@@ -65,24 +96,6 @@ cmake --build --preset debug
 ```bash
 ./scripts/lint.sh
 ```
-
-## PR checklist
-
-- [ ] No new busy loops or high-frequency polling
-- [ ] All queues/caches bounded with clear limits
-- [ ] No thread-per-request; concurrency is bounded
-- [ ] Clean shutdown behavior verified
-- [ ] If touching processes: only heidi-managed trees; see `docs/PROCESS_POLICY.md`
-- [ ] Tests updated/added; CI passes
-- [ ] Docs updated if behavior changed
-
-## Definition of Done
-
-A change is done only if:
-
-- It has clear **acceptance criteria** (pass/fail)
-- It includes tests or a verifiable smoke path
-- It does not violate any non-negotiables
 
 ## Security
 
