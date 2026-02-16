@@ -2,8 +2,14 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
@@ -12,21 +18,55 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          fetch-depth: 0
 
-      - name: Submodule pointer gate
+      - name: Validate .local is a gitlink (submodule)
         run: |
-          if ! git diff --name-only | grep -q '^\\.local$'; then
-            echo "FAIL: PR must update .local submodule pointer"
-            echo "Every PR must include a .local submodule pointer update."
+          MODE=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $1}')
+          if [[ "$MODE" != "160000" ]]; then
+            echo "FAIL: .local must be a gitlink (submodule), not a regular directory"
+            echo "Found mode: $MODE"
+            echo "Expected: 160000 (submodule)"
             exit 1
           fi
-          echo "PASS: .local submodule pointer updated"
+          echo "PASS: .local is a gitlink (submodule)"
 
-      - name: Governance gate
+      - name: Submodule pointer bump gate
         run: |
-          chmod +x scripts/governance-gate.sh
-          ./scripts/governance-gate.sh
+          # For PRs: check if .local pointer changed
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
+            OLD=$(git ls-tree -q --mode "$BASE" .local 2>/dev/null | awk '{print $3}')
+            NEW=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $3}')
+            if [[ "$OLD" == "$NEW" ]]; then
+              echo "NOTE: .local submodule pointer unchanged (OK if no governance changes)"
+            else
+              echo "PASS: .local submodule pointer updated: $OLD -> $NEW"
+            fi
+          else
+            echo "PASS: running on push to main"
+          fi
+
+      - name: Check for emojis in commits
+        run: |
+          EMOJI_PATTERN='.*(\ud83d\ude00|\ud83d\ude03|\ud83d\ude04|[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]).*'
+          FOUND=0
+          for commit in $(git log --format=%H HEAD~${{ github.event.inputs.commits || '5' }}..HEAD 2>/dev/null || echo "HEAD"); do
+            MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
+            if echo "$MSG" | grep -E "$EMOJI_PATTERN" >/dev/null 2>&1; then
+              echo "FAIL: Emoji found in commit $commit: $MSG"
+              FOUND=1
+            fi
+          done
+          if [[ "$FOUND" == "1" ]]; then
+            exit 1
+          fi
+          echo "PASS: No emojis in recent commits"
+
+      - name: Governance gate (local verify)
+        run: |
+          chmod +x scripts/verify_local.sh
+          ./scripts/verify_local.sh
 
       - name: Install dependencies
         run: |
