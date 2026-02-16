@@ -16,16 +16,21 @@ namespace {
 constexpr std::string_view kVersion = "0.1.0";
 
 uint64_t get_rss_kb() {
-    FILE* f = fopen("/proc/self/statm", "r");
+    static FILE* f = nullptr;
+    if (!f) {
+        f = fopen("/proc/self/statm", "r");
+    }
+
     if (!f) {
         return 0;
     }
+    rewind(f);
+
+    long dummy = 0;
     long rss = 0;
-    if (fscanf(f, "%*ld %ld", &rss) != 1) {
-        fclose(f);
+    if (fscanf(f, "%ld %ld", &dummy, &rss) != 2) {
         return 0;
     }
-    fclose(f);
     return static_cast<uint64_t>(rss * 4096 / 1024);
 }
 
