@@ -1,5 +1,6 @@
 add_library(heidi-kernel-job STATIC
     job.cpp
+    process_inspector_procfs.cpp
 )
 
 target_include_directories(heidi-kernel-job
