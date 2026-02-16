@@ -25,6 +25,10 @@ jobs:
 
       - name: Validate .local is a gitlink (submodule)
         run: |
+          echo "=== DEBUG: Listing HEAD tree ==="
+          git ls-tree HEAD
+          echo "=== DEBUG: Checking .local ==="
+          git ls-tree HEAD .local || echo "DEBUG: .local not in tree"
           # Check .gitmodules exists and contains .local submodule
           if [ ! -f .gitmodules ]; then
             echo "FAIL: .gitmodules is missing"
