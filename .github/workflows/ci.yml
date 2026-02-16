@@ -23,34 +23,44 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - name: Check PR title/body for emojis
-        run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          BODY="${{ github.event.pull_request.body }}"
-          if echo "$TITLE" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-            echo "FAIL: Emoji found in PR title"
-            exit 1
-          fi
-          if echo "$BODY" | grep -qE $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-            echo "FAIL: Emoji found in PR body"
-            exit 1
-          fi
-          echo "PASS: No emojis in PR title/body"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check for bidi control characters
+      - name: Check PR title/body for emojis and bidi
         run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          BODY="${{ github.event.pull_request.body }}"
-          CONTENT="$TITLE $BODY"
-          # Check for bidi control characters using UTF-8 byte sequences:
-          # U+202A-LRE: \xE2\x80\xAA, U+202B-RLE: \xE2\x80\xAB, U+202C-PDF: \xE2\x80\xAC
-          # U+202D-LRO: \xE2\x80\xAD, U+202E-RLO: \xE2\x80\xAE, U+2066-LRI: \xE2\x81\xA6
-          # U+2067-RLI: \xE2\x81\xA7, U+2068-FSI: \xE2\x81\xA8, U+2069-PDI: \xE2\x81\xA9
-          if echo "$CONTENT" | grep -qE $'(\xe2\x80[\xaa-\xae]|\xe2\x81[\xa6-\xa9])' 2>/dev/null; then
-            echo "FAIL: Bidi control characters found in PR"
-            exit 1
-          fi
-          echo "PASS: No bidi control chars"
+          python3 << 'EOF'
+          import re
+          import os
+          import sys
+
+          title = os.environ.get('GITHUB_PR_TITLE', '')
+          body = os.environ.get('GITHUB_PR_BODY', '')
+
+          emoji_pattern = re.compile(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251]')
+          bidi_pattern = re.compile(r'[\u202A-\u202E\u2066-\u2069]')
+
+          errors = []
+
+          if emoji_pattern.search(title):
+              errors.append("FAIL: Emoji found in PR title")
+          if emoji_pattern.search(body):
+              errors.append("FAIL: Emoji found in PR body")
+          if bidi_pattern.search(title):
+              errors.append("FAIL: Bidi control characters found in PR title")
+          if bidi_pattern.search(body):
+              errors.append("FAIL: Bidi control characters found in PR body")
+
+          if errors:
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          print("PASS: No emojis or bidi control chars in PR title/body")
+          EOF
+        env:
+          GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+          GITHUB_PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Check for build artifacts
         run: |
@@ -64,6 +74,7 @@ jobs:
 
   build-test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -77,12 +88,6 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
-
-      - name: Initialize submodules
-        shell: bash
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
 
       - name: Validate .local is a gitlink (submodule)
         run: |
@@ -113,25 +118,51 @@ jobs:
 
       - name: Check for emojis in commits
         run: |
-          FOUND=0
-          # For PRs: check commits not on main
-          # For push to main: skip (already checked before merge)
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse origin/main)
-            for commit in $(git log --format=%H "$BASE"..HEAD 2>/dev/null || echo ""); do
-              MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-              if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
-                echo "FAIL: Emoji found in commit $commit: $MSG"
-                FOUND=1
-              fi
-            done
-            if [[ "$FOUND" == "1" ]]; then
-              exit 1
-            fi
-            echo "PASS: No emojis in new commits"
-          else
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
             echo "SKIP: Emoji check only runs on PRs"
+            exit 0
           fi
+          python3 << 'EOF'
+          import subprocess
+          import re
+          import os
+          import sys
+
+          emoji_pattern = re.compile(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251]')
+
+          try:
+              base = subprocess.check_output(
+                  ['git', 'merge-base', 'HEAD', 'origin/main'],
+                  stderr=subprocess.DEVNULL
+              ).decode().strip()
+          except:
+              base = subprocess.check_output(
+                  ['git', 'rev-parse', 'origin/main'],
+                  stderr=subprocess.DEVNULL
+              ).decode().strip()
+
+          commits = subprocess.check_output(
+              ['git', 'log', '--format=%H', f'{base}..HEAD'],
+              stderr=subprocess.DEVNULL
+          ).decode().strip().split('\n')
+
+          errors = []
+          for commit in commits:
+              if not commit:
+                  continue
+              msg = subprocess.check_output(
+                  ['git', 'log', '-1', '--format=%B', commit],
+                  stderr=subprocess.DEVNULL
+              ).decode()
+              if emoji_pattern.search(msg):
+                  errors.append(f"FAIL: Emoji found in commit {commit}: {msg[:100]}")
+
+          if errors:
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          print("PASS: No emojis in new commits")
+          EOF
 
       - name: Governance gate (local verify)
         run: |
@@ -162,15 +193,15 @@ jobs:
       - name: Configure + Build (Debug)
         if: hashFiles('CMakeLists.txt') != ''
         run: |
-          cmake --preset debug || true
-          cmake --build --preset debug || true
+          cmake --preset debug
+          cmake --build --preset debug
 
       - name: Lint (format + tidy where available)
         run: |
-          find . -name '*.cpp' -o -name '*.h' | grep -v '^./build' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {} || true
+          find . -name '*.cpp' -o -name '*.h' | grep -v '^./build' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {}
 
       - name: Tests
         if: hashFiles('CMakeLists.txt') != ''
         run: |
           chmod +x scripts/test.sh
-          ./scripts/test.sh || true
+          ./scripts/test.sh
