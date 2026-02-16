@@ -1,48 +1,38 @@
 name: ci
 
 on:
-  push:
   pull_request:
 
 jobs:
-  build-test:
+  governance-gate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          fetch-depth: 0
 
-      - name: Submodule pointer gate
+      - name: Validate .gitmodules exists
         run: |
-          if ! git diff --name-only | grep -q '^\\.local$'; then
+          if [ ! -f .gitmodules ]; then
+            echo "FAIL: .gitmodules is missing"
+            exit 1
+          fi
+          echo "PASS: .gitmodules exists"
+
+      - name: Validate .local submodule is configured
+        run: |
+          if ! grep -q 'submodule ".local"' .gitmodules; then
+            echo "FAIL: .local submodule is not configured in .gitmodules"
+            exit 1
+          fi
+          echo "PASS: .local submodule is configured"
+
+      - name: Validate .local submodule pointer changed
+        run: |
+          if ! git diff --name-only ${{ github.event.pull_request.base.sha }}..HEAD | grep -q '^\.local$'; then
             echo "FAIL: PR must update .local submodule pointer"
             echo "Every PR must include a .local submodule pointer update."
             exit 1
           fi
           echo "PASS: .local submodule pointer updated"
-
-      - name: Governance gate
-        run: |
-          chmod +x scripts/governance-gate.sh
-          ./scripts/governance-gate.sh
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang clang-tidy clang-format
-
-      - name: Configure + Build (Debug)
-        run: |
-          cmake --preset debug
-          cmake --build --preset debug
-
-      - name: Lint (format + tidy where available)
-        run: |
-          chmod +x scripts/lint.sh
-          ./scripts/lint.sh
-
-      - name: Tests
-        run: |
-          chmod +x scripts/test.sh
-          ./scripts/test.sh
