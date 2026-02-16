@@ -8,10 +8,6 @@ namespace {
 
 constexpr std::string_view kVersion = "0.1.0";
 
-bool starts_with(std::string_view sv, std::string_view prefix) {
-    return sv.size() >= prefix.size() && sv.substr(0, prefix.size()) == prefix;
-}
-
 } // namespace
 
 Result<Config> ConfigParser::parse(int argc, char* argv[]) {
@@ -29,7 +25,7 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
             config.log_level = argv[++i];
         } else if (arg == "--config" && i + 1 < argc) {
             config.config_path = argv[++i];
-        } else if (!starts_with(arg, "-")) {
+        } else {
             return Result<Config>::error(
                 ErrorCode::InvalidArgument,
                 std::string_view{"Unknown argument"});
