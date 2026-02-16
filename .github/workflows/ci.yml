@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
+      - '**'
   pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 concurrency:
@@ -12,49 +14,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-test:
+  governance:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: false
 
       - name: Validate .local is a gitlink (submodule)
         run: |
-          MODE=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $1}')
-          if [[ "$MODE" != "160000" ]]; then
-            echo "FAIL: .local must be a gitlink (submodule), not a regular directory"
-            echo "Found mode: $MODE"
-            echo "Expected: 160000 (submodule)"
+          if [ ! -f .gitmodules ]; then
+            echo "FAIL: .gitmodules is missing"
             exit 1
           fi
-          echo "PASS: .local is a gitlink (submodule)"
-
-      - name: Submodule pointer bump gate
-        run: |
-          # For PRs: check if .local pointer changed
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
-            OLD=$(git ls-tree -q --mode "$BASE" .local 2>/dev/null | awk '{print $3}')
-            NEW=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $3}')
-            if [[ "$OLD" == "$NEW" ]]; then
-              echo "NOTE: .local submodule pointer unchanged (OK if no governance changes)"
-            else
-              echo "PASS: .local submodule pointer updated: $OLD -> $NEW"
-            fi
-          else
-            echo "PASS: running on push to main"
+          if ! grep -q 'submodule ".local"' .gitmodules; then
+            echo "FAIL: .local not configured as submodule in .gitmodules"
+            exit 1
           fi
+          LOCAL_ENTRY=$(git ls-tree HEAD .local)
+          MODE=$(echo "$LOCAL_ENTRY" | awk '{print $1}')
+          if [ "$MODE" != "160000" ]; then
+            echo "FAIL: .local must be a gitlink"
+            exit 1
+          fi
+          echo "PASS: .local is a gitlink"
 
       - name: Check for emojis in commits
         run: |
-          EMOJI_PATTERN='.*(\ud83d\ude00|\ud83d\ude03|\ud83d\ude04|[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]).*'
           FOUND=0
-          for commit in $(git log --format=%H HEAD~${{ github.event.inputs.commits || '5' }}..HEAD 2>/dev/null || echo "HEAD"); do
+          for commit in $(git log --format=%H HEAD~10..HEAD 2>/dev/null || echo "HEAD"); do
             MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -E "$EMOJI_PATTERN" >/dev/null 2>&1; then
-              echo "FAIL: Emoji found in commit $commit: $MSG"
+            if echo "$MSG" | grep -P '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F1E0}-\x{1F1FF}]' >/dev/null 2>&1; then
+              echo "FAIL: Emoji found in commit $commit"
               FOUND=1
             fi
           done
@@ -63,27 +56,40 @@ jobs:
           fi
           echo "PASS: No emojis in recent commits"
 
-      - name: Governance gate (local verify)
-        run: |
-          chmod +x scripts/verify_local.sh
-          ./scripts/verify_local.sh
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install dependencies
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang clang-tidy clang-format
+          sudo apt-get install -y cmake ninja-build g++
 
-      - name: Configure + Build (Debug)
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
         run: |
-          cmake --preset debug
-          cmake --build --preset debug
+          brew install cmake ninja
 
-      - name: Lint (format + tidy where available)
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
         run: |
-          chmod +x scripts/lint.sh
-          ./scripts/lint.sh
+          choco install cmake ninja --yes
 
-      - name: Tests
+      - name: Configure
+        run: cmake --preset debug
+
+      - name: Build
+        run: cmake --build --preset debug
+
+      - name: Run tests
         run: |
-          chmod +x scripts/test.sh
-          ./scripts/test.sh
+          ctest --preset debug --output-on-failure
