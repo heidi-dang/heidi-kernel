@@ -25,10 +25,17 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
             config.log_level = argv[++i];
         } else if (arg == "--config" && i + 1 < argc) {
             config.config_path = argv[++i];
+<<<<<<< HEAD
         } else {
+=======
+        } else if (!arg.starts_with("-")) {
             return Result<Config>::error(
                 ErrorCode::InvalidArgument,
                 std::string_view{"Unknown argument"});
+        } else {
+            return Result<Config>::error(
+                ErrorCode::InvalidArgument,
+                std::string_view{"Unknown flag"});
         }
     }
 

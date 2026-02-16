@@ -5,13 +5,13 @@ heidi-kernel is a native C++23 runtime daemon for WSL2-first environments. It ex
 ## Project structure
 
 - **Public repo** (`heidi-kernel`): contains source code, CI, scripts, public docs.
-- **Private repo** (`.local` submodule): contains rules, tasks, context, worklogs, acknowledgements.
+- **Public companion repo** (`.local` submodule): contains governance rules, tasks, worklogs, dashboard - now public at https://github.com/heidi-dang/heidi-kernel-local
 
 ## Mandatory onboarding
 
 **Before starting any work, sync with latest main and read `.local/INDEX.md`.**
 
-If you have access to the private `.local` submodule:
+If you have access to the public `.local` submodule:
 - First-time contributors must create an acknowledgement file at `.local/ack/<your_name>.md`
 - See `.local/SYNC_POLICY.md` for the sync workflow
 
@@ -41,7 +41,7 @@ git submodule update --init --recursive
 
 ### Update rules/tasks/worklog
 
-1. Commit + push to private `.local` repo
+1. Commit + push to public `.local` repo (heidi-kernel-local)
 2. Bump the `.local` submodule pointer in public repo:
    - Edit `.local` (it is a file, not a directory) to point to the new commit
    - Commit the pointer change in the public repo

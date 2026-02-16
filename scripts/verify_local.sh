@@ -15,7 +15,7 @@ echo "=== Local Governance Verification ==="
 
 # Gate 1: .local must be a gitlink (submodule)
 echo "Checking .local is a gitlink..."
-MODE=$(git ls-tree HEAD .local 2>/dev/null | awk '{print $1}')
+MODE=$(git ls-tree -r HEAD | grep '.local$' | awk '{print $1}')
 if [[ "$MODE" != "160000" ]]; then
   fail ".local must be a gitlink (submodule), not a regular directory. Found mode: $MODE"
 fi
@@ -25,8 +25,8 @@ pass ".local is a gitlink (submodule)"
 echo "Checking for emojis in commits..."
 FOUND=0
 for commit in $(git log --format=%H -5 HEAD 2>/dev/null || echo "HEAD"); do
-  MSG=$(git log -1 --format=%B "$commit" 2>/dev/null | tr -d '[:print:]' | tr -d '\000-\037')
-  if echo "$MSG" | grep -qE '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F1E0}-\x{1F1FF}]' 2>/dev/null; then
+  MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
+  if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
     warn "Emoji found in commit $commit"
     FOUND=1
   fi
