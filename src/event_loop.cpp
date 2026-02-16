@@ -1,7 +1,6 @@
 #include "heidi-kernel/event_loop.h"
 
 #include <chrono>
-#include <condition_variable>
 #include <thread>
 
 namespace heidi {
@@ -11,6 +10,9 @@ EventLoop::EventLoop(std::chrono::milliseconds tick_interval)
 
 EventLoop::~EventLoop() {
     request_stop();
+    if (worker_.joinable()) {
+        worker_.join();
+    }
 }
 
 void EventLoop::set_tick_callback(TickCallback cb) {
@@ -22,13 +24,14 @@ void EventLoop::run() {
         return;
     }
 
-    worker_ = std::jthread([this](std::stop_token st) {
-        tick_loop(st);
+    worker_ = std::thread([this]() {
+        tick_loop();
     });
 }
 
 void EventLoop::request_stop() {
     stop_requested_.store(true);
+    cv_.notify_one();
 }
 
 bool EventLoop::is_running() const noexcept {
@@ -39,10 +42,10 @@ std::chrono::milliseconds EventLoop::tick_interval() const noexcept {
     return tick_interval_;
 }
 
-void EventLoop::tick_loop(std::stop_token stop_token) {
+void EventLoop::tick_loop() {
     auto last_tick = std::chrono::steady_clock::now();
 
-    while (!stop_token.stop_requested() && !stop_requested_.load()) {
+    while (!stop_requested_.load()) {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             now - last_tick);
@@ -54,7 +57,10 @@ void EventLoop::tick_loop(std::stop_token stop_token) {
             last_tick = now;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds{10});
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait_for(lock, std::chrono::milliseconds{10}, [this] {
+            return stop_requested_.load();
+        });
     }
 
     running_.store(false);

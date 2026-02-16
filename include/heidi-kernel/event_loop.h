@@ -2,8 +2,9 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
-#include <stop_token>
+#include <mutex>
 #include <thread>
 
 namespace heidi {
@@ -24,13 +25,15 @@ public:
     [[nodiscard]] std::chrono::milliseconds tick_interval() const noexcept;
 
 private:
-    void tick_loop(std::stop_token stop_token);
+    void tick_loop();
 
     std::chrono::milliseconds tick_interval_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};
     TickCallback tick_callback_;
-    std::jthread worker_;
+    std::thread worker_;
+    std::mutex mutex_;
+    std::condition_variable cv_;
 };
 
 }
