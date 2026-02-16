@@ -161,27 +161,58 @@ void HttpServer::handle_client(int client_fd) {
     write(client_fd, response.c_str(), response.size());
 }
 
-HttpRequest HttpServer::parse_request(const std::string& data) const {
+HttpRequest HttpServer::parse_request(const std::string& data) {
     HttpRequest req;
+    std::string_view sv(data);
 
-    size_t pos = data.find("\r\n\r\n");
-    std::string_view body_view;
-    if (pos != std::string::npos) {
-        body_view = std::string_view(data).substr(pos + 4);
+    size_t header_end = sv.find("\r\n\r\n");
+    if (header_end == std::string_view::npos) {
+        return req;
     }
 
-    size_t line_end = data.find("\r\n");
-    if (line_end != std::string::npos) {
-        std::string_view request_line(data.c_str(), line_end);
-        size_t sp1 = request_line.find(' ');
-        size_t sp2 = request_line.find(' ', sp1 + 1);
-        if (sp1 != std::string::npos && sp2 != std::string::npos) {
-            req.method = trim(request_line.substr(0, sp1));
-            req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+    std::string_view headers_part = sv.substr(0, header_end);
+    if (header_end + 4 < sv.size()) {
+        req.body = sv.substr(header_end + 4);
+    }
+
+    size_t line_end = headers_part.find("\r\n");
+    if (line_end == std::string_view::npos) {
+        line_end = headers_part.size();
+    }
+
+    std::string_view request_line = headers_part.substr(0, line_end);
+    size_t sp1 = request_line.find(' ');
+    size_t sp2 = request_line.find(' ', sp1 + 1);
+
+    if (sp1 != std::string_view::npos && sp2 != std::string_view::npos) {
+        req.method = trim(request_line.substr(0, sp1));
+        req.path = trim(request_line.substr(sp1 + 1, sp2 - sp1 - 1));
+    } else {
+        return req;
+    }
+
+    if (line_end < headers_part.size()) {
+        size_t pos = line_end + 2;
+        while (pos < headers_part.size()) {
+            size_t next_line = headers_part.find("\r\n", pos);
+            if (next_line == std::string_view::npos) {
+                next_line = headers_part.size();
+            }
+
+            std::string_view line = headers_part.substr(pos, next_line - pos);
+            if (!line.empty()) {
+                size_t colon = line.find(':');
+                if (colon != std::string_view::npos) {
+                    std::string key(line.substr(0, colon));
+                    std::string_view val_view = line.substr(colon + 1);
+                    req.headers[key] = std::string(trim(val_view));
+                }
+            }
+            if (next_line == headers_part.size()) break;
+            pos = next_line + 2;
         }
     }
 
-    req.body = body_view;
     return req;
 }
 
