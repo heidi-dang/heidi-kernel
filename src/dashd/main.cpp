@@ -21,7 +21,7 @@ void signal_handler(int) {
     g_running = 0;
 }
 
-std::string query_kernel_status() {
+std::string query_kernel(const std::string& cmd, const std::string& body = "") {
     const char* xdg_runtime = getenv("XDG_RUNTIME_DIR");
     std::string socket_path = xdg_runtime && xdg_runtime[0] ?
         std::string(xdg_runtime) + "/heidi-kernel.sock" :
@@ -42,8 +42,12 @@ std::string query_kernel_status() {
         return "{\"error\":\"kernel_not_running\"}";
     }
 
-    const char* request = "STATUS\n";
-    ssize_t w = write(fd, request, strlen(request));
+    std::string request = cmd;
+    if (!body.empty()) {
+        request += " " + body;
+    }
+    request += "\n";
+    ssize_t w = write(fd, request.c_str(), request.size());
     if (w < 0) {
         close(fd);
         return "{\"error\":\"write_failed\"}";
@@ -67,9 +71,41 @@ std::string query_kernel_status() {
     return std::string(buf, n);
 }
 
+std::string parse_kv_to_json(const std::string& raw) {
+    std::istringstream iss(raw);
+    std::string line;
+    std::getline(iss, line); // skip command line
+    std::ostringstream json;
+    json << "{";
+    bool first = true;
+    while (std::getline(iss, line)) {
+        size_t colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string key = line.substr(0, colon);
+            std::string value = line.substr(colon + 1);
+            // Trim spaces
+            key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), key.end());
+            value.erase(value.begin(), std::find_if(value.begin(), value.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            value.erase(std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), value.end());
+            if (!first) json << ",";
+            json << "\"" << key << "\":";
+            // If numeric, no quotes, else quotes
+            if (value.find_first_not_of("0123456789.-") == std::string::npos) {
+                json << value;
+            } else {
+                json << "\"" << value << "\"";
+            }
+            first = false;
+        }
+    }
+    json << "}";
+    return json.str();
+}
+
 void poll_kernel_status() {
     while (g_running) {
-        std::string status = query_kernel_status();
+        std::string status = query_kernel("STATUS");
         {
             std::lock_guard<std::mutex> lock(g_status_mutex);
             g_kernel_status = status;
@@ -81,6 +117,8 @@ void poll_kernel_status() {
 } // namespace
 
 int main(int argc, char* argv[]) {
+    (void)argc;
+    (void)argv;
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
@@ -89,6 +127,7 @@ int main(int argc, char* argv[]) {
     heidi::HttpServer server("127.0.0.1", 7778);
 
     server.register_handler("/api/status", [](const heidi::HttpRequest& req) {
+        (void)req;
         heidi::HttpResponse resp;
         std::string status;
         {
@@ -104,36 +143,70 @@ int main(int argc, char* argv[]) {
     });
 
     server.register_handler("/", [](const heidi::HttpRequest& req) {
+        (void)req;
         heidi::HttpResponse resp;
-        resp.status_code = 200;
+        resp.body = "<html><body><h1>Heidi Kernel Dashboard</h1><p>API endpoints: /api/status, /api/governor/policy, /api/governor/diagnostics</p></body></html>";
         resp.headers["Content-Type"] = "text/html";
-        resp.body = R"(<!DOCTYPE html>
-<html>
-<head>
-<title>Heidi Kernel Dashboard</title>
-<style>
-body { font-family: monospace; padding: 20px; }
-#status { background: #f0f0f0; padding: 10px; border-radius: 4px; }
-</style>
-</head>
-<body>
-<h1>Kernel Status</h1>
-<pre id="status">Loading...</pre>
-<script>
-async function update() {
-  try {
-    const r = await fetch('/api/status');
-    const j = await r.json();
-    document.getElementById('status').textContent = JSON.stringify(j, null, 2);
-  } catch(e) {
-    document.getElementById('status').textContent = 'Error: ' + e;
-  }
-}
-update();
-setInterval(update, 1000);
-</script>
-</body>
-</html>)";
+        return resp;
+    });
+
+    server.register_handler("/api/governor/policy", [](const heidi::HttpRequest& req) -> heidi::HttpResponse {
+        heidi::HttpResponse resp;
+        if (req.method == "GET") {
+            std::string raw = query_kernel("governor/policy");
+            if (raw.find("error") == 0) {
+                resp.status_code = 503;
+                resp.body = raw;
+                return resp;
+            }
+            resp.body = parse_kv_to_json(raw);
+            resp.headers["Content-Type"] = "application/json";
+        } else if (req.method == "PUT") {
+            std::string raw = query_kernel("governor/policy_update", std::string(req.body));
+            if (raw.find("error") == 0) {
+                resp.status_code = 503;
+                resp.body = raw;
+                return resp;
+            }
+            if (raw.find("validation_failed") != std::string::npos) {
+                resp.status_code = 400;
+                resp.body = parse_kv_to_json(raw);
+                resp.headers["Content-Type"] = "application/json";
+                return resp;
+            }
+            if (raw.find("policy_updated") != std::string::npos) {
+                resp.status_code = 200;
+                resp.body = parse_kv_to_json(raw);
+                resp.headers["Content-Type"] = "application/json";
+                return resp;
+            }
+            resp.status_code = 500;
+            resp.body = R"({"error": "unknown_response"})";
+            resp.headers["Content-Type"] = "application/json";
+        } else {
+            resp.status_code = 405;
+            resp.body = R"({"error": "Method not allowed"})";
+            resp.headers["Content-Type"] = "application/json";
+        }
+        return resp;
+    });
+
+    server.register_handler("/api/governor/diagnostics", [](const heidi::HttpRequest& req) -> heidi::HttpResponse {
+        heidi::HttpResponse resp;
+        if (req.method != "GET") {
+            resp.status_code = 405;
+            resp.body = R"({"error": "Method not allowed"})";
+            resp.headers["Content-Type"] = "application/json";
+            return resp;
+        }
+        std::string raw = query_kernel("governor/diagnostics");
+        if (raw.find("error") == 0) {
+            resp.status_code = 503;
+            resp.body = raw;
+            return resp;
+        }
+        resp.body = parse_kv_to_json(raw);
+        resp.headers["Content-Type"] = "application/json";
         return resp;
     });
 

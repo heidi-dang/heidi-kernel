@@ -10,8 +10,10 @@ cmake --preset debug
 cmake --build --preset debug
 
 # Unit tests (if any)
+# Exclude INTEGRATION tests by default - run them separately with:
+#   ctest --test-dir build -R '^IntegrationTest' --output-on-failure
 if [[ -f "$ROOT/build/debug/CTestTestfile.cmake" ]]; then
-  ctest --preset debug
+  ctest --preset debug -E '^IntegrationTest'
 else
   echo "No CTest tests configured yet; skipping" >&2
 fi

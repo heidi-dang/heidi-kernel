@@ -15,6 +15,8 @@ add_executable(unit_tests
     test_ipc.cpp
     test_metrics.cpp
     test_job.cpp
+    test_governor.cpp
+    test_policy_store.cpp
     ../src/config.cpp
 )
 
@@ -27,7 +29,10 @@ target_link_libraries(unit_tests
         heidi-ipc
         heidi-metrics
         heidi-kernel-job
+        heidi-kernel-governor
 )
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+add_subdirectory(integration)

@@ -10,6 +10,7 @@ target_link_libraries(heidi-kernel-daemon
         heidi-ipc
         heidi-metrics
         heidi-kernel-job
+        heidi-kernel-governor
         heidi-kernel-lib
 )
 
