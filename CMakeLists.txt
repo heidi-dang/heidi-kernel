@@ -11,7 +11,7 @@ include(GNUInstallDirs)
 
 add_subdirectory(src)
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()
     add_subdirectory(tests)
 endif()

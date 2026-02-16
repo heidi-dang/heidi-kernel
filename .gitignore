@@ -1,3 +1,7 @@
 # Secrets
 .local/secrets/
 !.local/secrets/_template.md
+
+# Build
+build/
+*.log
