@@ -29,7 +29,7 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
             config.log_level = argv[++i];
         } else if (arg == "--config" && i + 1 < argc) {
             config.config_path = argv[++i];
-        } else if (!starts_with(arg, "-")) {
+        } else {
             return Result<Config>::error(
                 ErrorCode::InvalidArgument,
                 std::string_view{"Unknown argument"});
