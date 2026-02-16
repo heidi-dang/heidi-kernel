@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <poll.h>
 #include <string>
 
 namespace {
@@ -85,6 +86,12 @@ void HttpServer::handle_client(int client_fd) {
             const char* resp_413 = "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\n\r\n";
             write(client_fd, resp_413, strlen(resp_413));
             return;
+        }
+
+        struct pollfd pfd = {client_fd, POLLIN, 0};
+        int ret = poll(&pfd, 1, 5000); // 5 seconds timeout
+        if (ret <= 0) {
+            break;
         }
 
         n = read(client_fd, temp_buf, sizeof(temp_buf));
