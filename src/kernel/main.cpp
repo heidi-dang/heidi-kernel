@@ -28,7 +28,7 @@ std::string get_socket_path() {
 
 } // namespace
 
-int main(int argc, char* argv[]) {
+int main(int, char*[]) {
     std::string socket_path = get_socket_path();
 
     heidi::Logger logger;
@@ -42,6 +42,10 @@ int main(int argc, char* argv[]) {
     status_socket.bind();
 
     logger.info("status socket bound");
+
+    std::thread status_thread([&status_socket]() {
+        status_socket.serve_forever();
+    });
 
     heidi::EventLoop loop{std::chrono::milliseconds{100}};
     int tick_count = 0;
@@ -61,10 +65,15 @@ int main(int argc, char* argv[]) {
     }
 
     logger.info("shutdown requested");
+    status_socket.set_stop();
     loop.request_stop();
 
     while (loop.is_running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    }
+
+    if (status_thread.joinable()) {
+        status_thread.join();
     }
 
     logger.info("heidi-kernel stopped");

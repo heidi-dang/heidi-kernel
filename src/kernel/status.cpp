@@ -21,7 +21,8 @@ uint64_t get_rss_kb() {
         return 0;
     }
     long rss = 0;
-    if (fscanf(f, "%*ld %ld", &rss) != 1) {
+    long dummy = 0;
+    if (fscanf(f, "%ld %ld", &dummy, &rss) != 2) {
         fclose(f);
         return 0;
     }
