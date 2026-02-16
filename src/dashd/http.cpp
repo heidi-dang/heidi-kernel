@@ -1,5 +1,6 @@
 #include "heidi-kernel/http.h"
 
+#include <string>
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
