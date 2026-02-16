@@ -1,5 +1,7 @@
 name: ci
 
+# CI workflow for heidi-kernel build, test, and governance validation
+
 on:
   push:
     branches:
@@ -77,12 +79,6 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
-
-      - name: Initialize submodules
-        shell: bash
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
 
       - name: Validate .local is a gitlink (submodule)
         run: |
@@ -162,15 +158,15 @@ jobs:
       - name: Configure + Build (Debug)
         if: hashFiles('CMakeLists.txt') != ''
         run: |
-          cmake --preset debug || true
-          cmake --build --preset debug || true
+          cmake --preset debug
+          cmake --build --preset debug
 
       - name: Lint (format + tidy where available)
         run: |
-          find . -name '*.cpp' -o -name '*.h' | grep -v '^./build' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {} || true
+          find . -name '*.cpp' -o -name '*.h' | grep -v '^./build' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {}
 
       - name: Tests
         if: hashFiles('CMakeLists.txt') != ''
         run: |
           chmod +x scripts/test.sh
-          ./scripts/test.sh || true
+          ./scripts/test.sh
