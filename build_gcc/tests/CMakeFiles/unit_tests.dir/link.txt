@@ -1,0 +1,1 @@
+/usr/bin/g++ CMakeFiles/unit_tests.dir/test_config.cpp.o -o unit_tests  ../src/libheidi-kernel-lib.a ../lib/libgtest_main.a ../lib/libgtest.a

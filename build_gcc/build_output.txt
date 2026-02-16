@@ -1,0 +1,25 @@
+[ 12%] Building CXX object src/CMakeFiles/heidi-kernel-lib.dir/logger.cpp.o
+[ 25%] Building CXX object src/CMakeFiles/heidi-kernel-lib.dir/result.cpp.o
+[ 37%] Building CXX object src/CMakeFiles/heidi-kernel-lib.dir/event_loop.cpp.o
+[ 50%] Building CXX object src/CMakeFiles/heidi-kernel-lib.dir/config.cpp.o
+[ 62%] Linking CXX static library libheidi-kernel-lib.a
+[ 62%] Built target heidi-kernel-lib
+[ 75%] Building CXX object src/dashd/CMakeFiles/heidi-dashd.dir/main.cpp.o
+/app/src/dashd/main.cpp: In lambda function:
+/app/src/dashd/main.cpp:91:73: warning: unused parameter ‘req’ [-Wunused-parameter]
+   91 |     server.register_handler("/api/status", [](const heidi::HttpRequest& req) {
+      |                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/app/src/dashd/main.cpp: In lambda function:
+/app/src/dashd/main.cpp:106:63: warning: unused parameter ‘req’ [-Wunused-parameter]
+  106 |     server.register_handler("/", [](const heidi::HttpRequest& req) {
+      |                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/app/src/dashd/main.cpp: In function ‘int main(int, char**)’:
+/app/src/dashd/main.cpp:83:14: warning: unused parameter ‘argc’ [-Wunused-parameter]
+   83 | int main(int argc, char* argv[]) {
+      |          ~~~~^~~~
+/app/src/dashd/main.cpp:83:26: warning: unused parameter ‘argv’ [-Wunused-parameter]
+   83 | int main(int argc, char* argv[]) {
+      |                    ~~~~~~^~~~~~
+[ 87%] Building CXX object src/dashd/CMakeFiles/heidi-dashd.dir/http.cpp.o
+[100%] Linking CXX executable heidi-dashd
+[100%] Built target heidi-dashd

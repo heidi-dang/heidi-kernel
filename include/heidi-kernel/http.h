@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <string_view>
 #include <functional>
-#include <vector>
 #include <map>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace heidi {
 

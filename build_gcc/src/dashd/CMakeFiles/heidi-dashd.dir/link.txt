@@ -1,0 +1,1 @@
+/usr/bin/g++ "CMakeFiles/heidi-dashd.dir/main.cpp.o" "CMakeFiles/heidi-dashd.dir/http.cpp.o" -o heidi-dashd  ../libheidi-kernel-lib.a -lpthread

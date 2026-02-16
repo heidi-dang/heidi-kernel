@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
+#include <string>
 #include <sys/socket.h>
 #include <unistd.h>
 

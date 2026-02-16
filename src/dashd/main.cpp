@@ -81,6 +81,8 @@ void poll_kernel_status() {
 } // namespace
 
 int main(int argc, char* argv[]) {
+    (void)argc;
+    (void)argv;
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
@@ -89,6 +91,7 @@ int main(int argc, char* argv[]) {
     heidi::HttpServer server("127.0.0.1", 7778);
 
     server.register_handler("/api/status", [](const heidi::HttpRequest& req) {
+        (void)req;
         heidi::HttpResponse resp;
         std::string status;
         {
@@ -104,6 +107,7 @@ int main(int argc, char* argv[]) {
     });
 
     server.register_handler("/", [](const heidi::HttpRequest& req) {
+        (void)req;
         heidi::HttpResponse resp;
         resp.status_code = 200;
         resp.headers["Content-Type"] = "text/html";
