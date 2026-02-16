@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string>
 
 namespace {
 
@@ -80,7 +81,6 @@ void HttpServer::handle_client(int client_fd) {
 
     HttpResponse resp;
     resp.headers["Content-Type"] = "application/json";
-    resp.headers["Access-Control-Allow-Origin"] = "*";
 
     for (const auto& [path, handler] : handlers_) {
         if (req.path == path) {
