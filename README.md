@@ -13,8 +13,8 @@ cd heidi-kernel
 cmake --preset debug
 cmake --build --preset debug
 
-# Test
-ctest --preset debug
+# Run
+./build/debug/heidi-kernel --help
 ```
 
 ## Documentation
