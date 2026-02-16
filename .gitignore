@@ -1,3 +1,21 @@
-# Secrets
-.local/secrets/
-!.local/secrets/_template.md
+# Build outputs
+build/
+.vscode/
+.idea/
+*.o
+*.a
+*.obj
+*.pdb
+*.exe
+*.d
+*.lib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Cache
+.cache/

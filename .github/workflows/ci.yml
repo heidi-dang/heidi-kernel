@@ -2,11 +2,8 @@ name: ci
 
 on:
   push:
-    branches:
-      - main
-      - '**'
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 concurrency:
@@ -15,73 +12,102 @@ concurrency:
 
 jobs:
   governance:
+    name: governance
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (no submodules)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: false
 
-      - name: Verify .local is gitlink
-        run: |
-          if [ ! -f .gitmodules ]; then
-            echo "FAIL: .gitmodules missing"
-            exit 1
-          fi
-          if ! grep -q 'submodule ".local"' .gitmodules; then
-            echo "FAIL: .local not configured"
-            exit 1
-          fi
-          MODE=$(git ls-tree HEAD .local | awk '{print $1}')
-          if [ "$MODE" != "160000" ]; then
-            echo "FAIL: .local not a gitlink"
-            exit 1
-          fi
-          echo "PASS: .local is gitlink"
-
-      - name: Check for emojis
-        run: |
-          FOUND=0
-          for commit in $(git log --format=%H HEAD~10..HEAD 2>/dev/null || echo "HEAD"); do
-            MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -P '[\x{1F600}-\x{1F64F}]' >/dev/null 2>&1; then
-              FOUND=1
-            fi
-          done
-          if [ "$FOUND" = "1" ]; then
-            exit 1
-          fi
-          echo "PASS: No emojis"
-
-      - name: Verify local script
+      - name: Validate .local is gitlink
         run: |
           chmod +x scripts/verify_local.sh
           ./scripts/verify_local.sh
 
+      - name: Secret scan (main repo only)
+        run: |
+          chmod +x scripts/scan_secrets.sh
+          ./scripts/scan_secrets.sh --include-submodule=off
+
+      - name: Check for build artifacts
+        run: |
+          ARTIFACTS=$(git ls-files | grep -E '\.(o|a|obj|pdb|exe|d|lib)$|^(build/|.cache/)' || true)
+          if [[ -n "$ARTIFACTS" ]]; then
+            echo "FAIL: Build artifacts tracked in repo:"
+            echo "$ARTIFACTS"
+            exit 1
+          fi
+          echo "PASS: No build artifacts tracked"
+
+      - name: Check for bidi control chars
+        run: |
+          python3 - <<'PY'
+          import subprocess, sys, pathlib
+          bidi = {chr(c) for c in range(0x202A, 0x202F)} | {chr(c) for c in range(0x2066, 0x206A)}
+          files = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          bad = []
+          for f in files:
+            if not f:
+              continue
+            p = pathlib.Path(f.decode("utf-8", "ignore"))
+            if p.suffix.lower() in {".png",".jpg",".jpeg",".gif",".webp",".pdf",".zip",".gz",".a",".o",".d",".obj",".pdb",".exe"}:
+              continue
+            try:
+              data = p.read_text(errors="ignore")
+            except Exception:
+              continue
+            if any(ch in data for ch in bidi):
+              bad.append(str(p))
+          if bad:
+            print("FAIL: bidi control chars found in:")
+            for x in bad:
+              print(f"  - {x}")
+            sys.exit(1)
+          print("PASS: no bidi control chars")
+          PY
+
   build-test:
+    name: build-test
+    needs: governance
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Initialize submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Secret scan (include .local if present)
+        run: |
+          chmod +x scripts/scan_secrets.sh
+          ./scripts/scan_secrets.sh --include-submodule=auto
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ clang-format
+          sudo apt-get install -y cmake ninja-build clang clang-tidy clang-format
 
-      - name: Configure
-        run: cmake --preset debug
-
-      - name: Build
-        run: cmake --build --preset debug
+      - name: Configure + Build (Debug)
+        if: hashFiles('CMakeLists.txt') != ''
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug
 
       - name: Lint
         run: |
-          find . -name '*.cpp' -o -name '*.h' | head -20 | xargs -I{} clang-format --style=file --dry-run -Werror {} || true
+          chmod +x scripts/lint.sh
+          ./scripts/lint.sh
 
       - name: Tests
+        if: hashFiles('CMakeLists.txt') != ''
         run: |
-          ctest --preset debug --output-on-failure || true
+          chmod +x scripts/test.sh
+          ./scripts/test.sh

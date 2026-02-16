@@ -6,19 +6,21 @@ cd "$ROOT"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
+FILES="$(git ls-files "*.cpp" "*.cc" "*.c" "*.hpp" "*.hh" "*.h" || true)"
+if [[ -z "${FILES}" ]]; then
+  echo "PASS: lint (no C/C++ files yet)"
+  exit 0
+fi
+
 if ! command -v clang-format >/dev/null 2>&1; then
   fail "clang-format not found"
 fi
 
-# Format check
-FILES=$(git ls-files "*.cpp" "*.cc" "*.c" "*.hpp" "*.hh" "*.h")
-if [[ -n "${FILES}" ]]; then
-  clang-format -i ${FILES}
-  if ! git diff --quiet; then
-    echo "clang-format produced changes. Please commit formatted output." >&2
-    git --no-pager diff
-    exit 1
-  fi
+clang-format -i ${FILES}
+if ! git diff --quiet; then
+  echo "clang-format produced changes. Please commit formatted output." >&2
+  git --no-pager diff
+  exit 1
 fi
 
 # clang-tidy (optional but enabled if compile_commands exists)
