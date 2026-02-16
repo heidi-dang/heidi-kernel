@@ -8,6 +8,7 @@
 #include <sys/un.h>
 #include <thread>
 #include <poll.h>
+#include <unistd.h>
 
 #include "heidi-kernel/http.h"
 
