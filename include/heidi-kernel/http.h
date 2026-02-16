@@ -34,10 +34,12 @@ public:
     void register_handler(std::string_view path, RequestHandler handler);
     void serve_forever();
 
-private:
-    void handle_client(int client_fd);
+    // Exposed for testing
     HttpRequest parse_request(const std::string& data) const;
     std::string format_response(const HttpResponse& resp) const;
+
+private:
+    void handle_client(int client_fd);
 
     std::string address_;
     uint16_t port_;
