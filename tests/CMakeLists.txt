@@ -15,6 +15,7 @@ add_executable(unit_tests
     test_ipc.cpp
     test_metrics.cpp
     test_job.cpp
+    http_test.cpp
     ../src/config.cpp
 )
 
@@ -27,6 +28,7 @@ target_link_libraries(unit_tests
         heidi-ipc
         heidi-metrics
         heidi-kernel-job
+        heidi-dashd-lib
 )
 
 include(GoogleTest)
