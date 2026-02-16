@@ -62,11 +62,12 @@ jobs:
 
       - name: Check for emojis in commits
         run: |
-          EMOJI_PATTERN='.*(\ud83d\ude00|\ud83d\ude03|\ud83d\ude04|[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]).*'
+          # Look for actual Unicode emoji characters (not colons or common words)
           FOUND=0
-          for commit in $(git log --format=%H HEAD~5..HEAD 2>/dev/null || echo "HEAD"); do
+          for commit in $(git log --format=%H HEAD~10..HEAD 2>/dev/null || echo "HEAD"); do
             MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -E "$EMOJI_PATTERN" >/dev/null 2>&1; then
+            # Check for actual emoji code points
+            if echo "$MSG" | grep -P '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F1E0}-\x{1F1FF}]' >/dev/null 2>&1; then
               echo "FAIL: Emoji found in commit $commit"
               FOUND=1
             fi
