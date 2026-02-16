@@ -5,7 +5,8 @@ namespace heidi {
 namespace {
 
 TEST(IpcProtocolTest, SerializePing) {
-    IpcMessage msg{"ping", {}};
+    IpcMessage msg;
+    msg.type = "ping";
     std::string serialized = IpcProtocol::serialize(msg);
     EXPECT_EQ(serialized, "ping\n");
 }

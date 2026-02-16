@@ -6,11 +6,12 @@
 #include <condition_variable>
 #include <vector>
 
+#include "heidi-kernel/metrics.h"
+
 namespace heidi {
 
-struct SystemMetrics;
-
 class MetricsHistory;
+class JobRunner;
 
 class Daemon {
 public:
@@ -37,8 +38,8 @@ private:
     std::thread sampler_thread_;
     std::condition_variable cv_;
     std::mutex cv_mutex_;
-};
 
-} // namespace heidi
+    JobRunner* job_runner_;
+};
 
 } // namespace heidi

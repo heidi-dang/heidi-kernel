@@ -43,4 +43,19 @@ private:
     MemStats read_mem_stats();
 };
 
+class MetricsHistory {
+public:
+    MetricsHistory(const std::string& state_dir, size_t max_file_size = 1024*1024, size_t max_files = 5);
+    
+    void append(const SystemMetrics& metrics);
+    std::vector<SystemMetrics> tail(size_t n);
+
+private:
+    void rotate_files();
+    
+    std::string state_dir_;
+    size_t max_file_size_;
+    size_t max_files_;
+};
+
 } // namespace heidi

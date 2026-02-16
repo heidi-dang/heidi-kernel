@@ -1,6 +1,7 @@
 #include "heidi-kernel/daemon.h"
 #include "heidi-kernel/ipc.h"
 #include "heidi-kernel/metrics.h"
+#include "heidi-kernel/job.h"
 
 #include <csignal>
 #include <iostream>
@@ -16,13 +17,14 @@ void signal_handler(int sig) {
 }
 
 Daemon::Daemon(const std::string& socket_path, const std::string& state_dir)
-    : socket_path_(socket_path), state_dir_(state_dir), history_(new MetricsHistory(state_dir)) {
+    : socket_path_(socket_path), state_dir_(state_dir), history_(new MetricsHistory(state_dir)), job_runner_(new JobRunner()) {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 }
 
 Daemon::~Daemon() {
     delete history_;
+    delete job_runner_;
 }
 
 void Daemon::run() {
@@ -30,6 +32,9 @@ void Daemon::run() {
     
     // Start sampling thread
     sampler_thread_ = std::thread(&Daemon::sampling_thread, this);
+    
+    // Start job runner
+    job_runner_->start();
     
     UnixSocketServer server(socket_path_);
     server.set_request_handler([this](const std::string& request) -> std::string {
@@ -54,6 +59,65 @@ void Daemon::run() {
                 oss << m.timestamp << "," << m.cpu_usage_percent << "," << m.mem.total << "," << m.mem.free << "\n";
             }
             return oss.str();
+        } else if (request.find("job run ") == 0) {
+            std::string command = request.substr(8); // "job run " is 8 chars
+            std::string job_id = job_runner_->submit_job(command);
+            return "job submitted\nid: " + job_id + "\n";
+        } else if (request.find("job status ") == 0) {
+            std::string job_id = request.substr(11); // "job status " is 11 chars
+            auto job = job_runner_->get_job_status(job_id);
+            if (!job) {
+                return "error\njob not found\n";
+            }
+            std::ostringstream oss;
+            oss << "job status\nid: " << job->id << "\nstatus: ";
+            switch (job->status) {
+                case JobStatus::PENDING: oss << "pending"; break;
+                case JobStatus::RUNNING: oss << "running"; break;
+                case JobStatus::COMPLETED: oss << "completed"; break;
+                case JobStatus::FAILED: oss << "failed"; break;
+                case JobStatus::CANCELLED: oss << "cancelled"; break;
+            }
+            oss << "\nexit_code: " << job->exit_code << "\n";
+            if (!job->output.empty()) {
+                oss << "output:\n" << job->output;
+            }
+            if (!job->error.empty()) {
+                oss << "error:\n" << job->error;
+            }
+            return oss.str();
+        } else if (request == "job status") {
+            auto jobs = job_runner_->get_recent_jobs(10);
+            std::ostringstream oss;
+            oss << "job status\n";
+            for (const auto& j : jobs) {
+                oss << j->id << ",";
+                switch (j->status) {
+                    case JobStatus::PENDING: oss << "pending"; break;
+                    case JobStatus::RUNNING: oss << "running"; break;
+                    case JobStatus::COMPLETED: oss << "completed"; break;
+                    case JobStatus::FAILED: oss << "failed"; break;
+                    case JobStatus::CANCELLED: oss << "cancelled"; break;
+                }
+                oss << "," << j->exit_code << "\n";
+            }
+            return oss.str();
+        } else if (request.find("job tail ") == 0) {
+            std::string job_id = request.substr(9); // "job tail " is 9 chars
+            auto job = job_runner_->get_job_status(job_id);
+            if (!job) {
+                return "error\njob not found\n";
+            }
+            std::ostringstream oss;
+            oss << "job tail\nid: " << job->id << "\noutput:\n" << job->output << "\nerror:\n" << job->error << "\n";
+            return oss.str();
+        } else if (request.find("job cancel ") == 0) {
+            std::string job_id = request.substr(12); // "job cancel " is 12 chars
+            if (job_runner_->cancel_job(job_id)) {
+                return "job cancelled\nid: " + job_id + "\n";
+            } else {
+                return "error\njob not found\n";
+            }
         } else {
             return "error\n";
         }
@@ -66,6 +130,9 @@ void Daemon::run() {
     }
     
     server.stop();
+    
+    // Stop job runner
+    job_runner_->stop();
     
     // Stop sampling
     {

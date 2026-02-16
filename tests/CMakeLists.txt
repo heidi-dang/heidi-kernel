@@ -12,6 +12,9 @@ enable_testing()
 
 add_executable(unit_tests
     test_config.cpp
+    test_ipc.cpp
+    test_metrics.cpp
+    test_job.cpp
     ../src/config.cpp
 )
 
@@ -21,6 +24,9 @@ target_compile_options(unit_tests PRIVATE -std=c++23)
 target_link_libraries(unit_tests
     PRIVATE
         gtest_main
+        heidi-ipc
+        heidi-metrics
+        heidi-kernel-job
 )
 
 include(GoogleTest)

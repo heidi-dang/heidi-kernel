@@ -38,7 +38,7 @@ std::string send_request(const std::string& socket_path, const std::string& requ
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "Usage: heidi-kernelctl <command> [--socket <path>]" << std::endl;
-        std::cout << "Commands: ping, status" << std::endl;
+        std::cout << "Commands: ping, status, metrics latest|tail <n>, job run|status|tail|cancel" << std::endl;
         return 1;
     }
 
@@ -71,9 +71,56 @@ int main(int argc, char* argv[]) {
                 std::cout << "Usage: heidi-kernelctl metrics latest|tail <n> [--socket <path>]" << std::endl;
                 return 1;
             }
+        } else if (command == "job") {
+            if (argc < 3) {
+                std::cout << "Usage: heidi-kernelctl job run <command>|status [id]|tail <id>|cancel <id> [--socket <path>]" << std::endl;
+                return 1;
+            }
+            std::string subcommand = argv[2];
+            if (subcommand == "run") {
+                if (argc < 4) {
+                    std::cout << "Usage: heidi-kernelctl job run <command> [--socket <path>]" << std::endl;
+                    return 1;
+                }
+                std::string job_cmd = argv[3];
+                for (int i = 4; i < argc; ++i) {
+                    if (std::string(argv[i]) == "--socket") break;
+                    job_cmd += " " + std::string(argv[i]);
+                }
+                std::string response = send_request(socket_path, "job run " + job_cmd + "\n");
+                std::cout << response;
+            } else if (subcommand == "status") {
+                if (argc >= 4 && std::string(argv[3]) != "--socket") {
+                    std::string job_id = argv[3];
+                    std::string response = send_request(socket_path, "job status " + job_id + "\n");
+                    std::cout << response;
+                } else {
+                    std::string response = send_request(socket_path, "job status\n");
+                    std::cout << response;
+                }
+            } else if (subcommand == "tail") {
+                if (argc < 4) {
+                    std::cout << "Usage: heidi-kernelctl job tail <id> [--socket <path>]" << std::endl;
+                    return 1;
+                }
+                std::string job_id = argv[3];
+                std::string response = send_request(socket_path, "job tail " + job_id + "\n");
+                std::cout << response;
+            } else if (subcommand == "cancel") {
+                if (argc < 4) {
+                    std::cout << "Usage: heidi-kernelctl job cancel <id> [--socket <path>]" << std::endl;
+                    return 1;
+                }
+                std::string job_id = argv[3];
+                std::string response = send_request(socket_path, "job cancel " + job_id + "\n");
+                std::cout << response;
+            } else {
+                std::cout << "Unknown job subcommand: " << subcommand << std::endl;
+                return 1;
+            }
         } else {
             std::cout << "Unknown command: " << command << std::endl;
-            std::cout << "Available: ping, status, metrics latest, metrics tail <n>" << std::endl;
+            std::cout << "Available: ping, status, metrics latest|tail <n>, job run|status|tail|cancel" << std::endl;
             return 1;
         }
         return 0;

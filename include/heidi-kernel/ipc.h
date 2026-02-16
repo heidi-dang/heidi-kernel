@@ -2,13 +2,12 @@
 
 #include <string>
 #include <cstdint>
-#include <nlohmann/json.hpp>
+#include <functional>
 
 namespace heidi {
 
 struct IpcMessage {
     std::string type;
-    nlohmann::json payload;
 };
 
 class IpcProtocol {
