@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - 'chore/*'
   workflow_dispatch:
 
 jobs:
