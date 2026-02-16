@@ -7,3 +7,5 @@ build/
 *.log
 *.o
 *.a
+.cache/
+compile_commands.json
