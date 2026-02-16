@@ -1,0 +1,455 @@
+[ 38%] Built target heidi-kernel-lib
+[ 61%] Built target heidi-kernel-core
+[ 76%] Built target heidi-kernel
+[ 84%] Building CXX object src/dashd/CMakeFiles/heidi-dashd.dir/http.cpp.o
+In file included from /app/src/dashd/http.cpp:1:
+/app/src/dashd/../../include/heidi-kernel/http.h:21:17: error: field ‘body’ has incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’}
+   21 |     std::string body;
+      |                 ^~~~
+In file included from /usr/include/c++/13/iosfwd:41,
+                 from /usr/include/c++/13/string_view:52,
+                 from /app/src/dashd/../../include/heidi-kernel/http.h:4:
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/../../include/heidi-kernel/http.h:40:17: error: field ‘address_’ has incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’}
+   40 |     std::string address_;
+      |                 ^~~~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp: In member function ‘void heidi::HttpServer::register_handler(std::string_view, heidi::RequestHandler)’:
+/app/src/dashd/http.cpp:35:44: error: invalid use of incomplete type ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   35 |     handlers_.emplace_back(std::string(path), std::move(handler));
+      |                                            ^
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp: In member function ‘void heidi::HttpServer::handle_client(int)’:
+/app/src/dashd/http.cpp:79:55: error: invalid use of incomplete type ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   79 |     HttpRequest req = parse_request(std::string(buf, n));
+      |                                                       ^
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp:82:17: error: no match for ‘operator[]’ (operand types are ‘std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’ and ‘const char [13]’)
+   82 |     resp.headers["Content-Type"] = "application/json";
+      |                 ^
+In file included from /usr/include/c++/13/map:63,
+                 from /app/src/dashd/../../include/heidi-kernel/http.h:7:
+/usr/include/c++/13/bits/stl_map.h:504:7: note: candidate: ‘std::map<_Key, _Tp, _Compare, _Alloc>::mapped_type& std::map<_Key, _Tp, _Compare, _Alloc>::operator[](const key_type&) [with _Key = std::__cxx11::basic_string<char>; _Tp = std::__cxx11::basic_string<char>; _Compare = std::less<std::__cxx11::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >; mapped_type = std::__cxx11::basic_string<char>; key_type = std::__cxx11::basic_string<char>]’
+  504 |       operator[](const key_type& __k)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_map.h:504:34: note:   no known conversion for argument 1 from ‘const char [13]’ to ‘const std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::key_type&’ {aka ‘const std::__cxx11::basic_string<char>&’}
+  504 |       operator[](const key_type& __k)
+      |                  ~~~~~~~~~~~~~~~~^~~
+/usr/include/c++/13/bits/stl_map.h:524:7: note: candidate: ‘std::map<_Key, _Tp, _Compare, _Alloc>::mapped_type& std::map<_Key, _Tp, _Compare, _Alloc>::operator[](key_type&&) [with _Key = std::__cxx11::basic_string<char>; _Tp = std::__cxx11::basic_string<char>; _Compare = std::less<std::__cxx11::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >; mapped_type = std::__cxx11::basic_string<char>; key_type = std::__cxx11::basic_string<char>]’
+  524 |       operator[](key_type&& __k)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_map.h:524:29: note:   no known conversion for argument 1 from ‘const char [13]’ to ‘std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::key_type&&’ {aka ‘std::__cxx11::basic_string<char>&&’}
+  524 |       operator[](key_type&& __k)
+      |                  ~~~~~~~~~~~^~~
+/app/src/dashd/http.cpp:83:17: error: no match for ‘operator[]’ (operand types are ‘std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’ and ‘const char [28]’)
+   83 |     resp.headers["Access-Control-Allow-Origin"] = "*";
+      |                 ^
+/usr/include/c++/13/bits/stl_map.h:504:7: note: candidate: ‘std::map<_Key, _Tp, _Compare, _Alloc>::mapped_type& std::map<_Key, _Tp, _Compare, _Alloc>::operator[](const key_type&) [with _Key = std::__cxx11::basic_string<char>; _Tp = std::__cxx11::basic_string<char>; _Compare = std::less<std::__cxx11::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >; mapped_type = std::__cxx11::basic_string<char>; key_type = std::__cxx11::basic_string<char>]’
+  504 |       operator[](const key_type& __k)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_map.h:504:34: note:   no known conversion for argument 1 from ‘const char [28]’ to ‘const std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::key_type&’ {aka ‘const std::__cxx11::basic_string<char>&’}
+  504 |       operator[](const key_type& __k)
+      |                  ~~~~~~~~~~~~~~~~^~~
+/usr/include/c++/13/bits/stl_map.h:524:7: note: candidate: ‘std::map<_Key, _Tp, _Compare, _Alloc>::mapped_type& std::map<_Key, _Tp, _Compare, _Alloc>::operator[](key_type&&) [with _Key = std::__cxx11::basic_string<char>; _Tp = std::__cxx11::basic_string<char>; _Compare = std::less<std::__cxx11::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >; mapped_type = std::__cxx11::basic_string<char>; key_type = std::__cxx11::basic_string<char>]’
+  524 |       operator[](key_type&& __k)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_map.h:524:29: note:   no known conversion for argument 1 from ‘const char [28]’ to ‘std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >::key_type&&’ {aka ‘std::__cxx11::basic_string<char>&&’}
+  524 |       operator[](key_type&& __k)
+      |                  ~~~~~~~~~~~^~~
+In file included from /usr/include/c++/13/bits/stl_algobase.h:64,
+                 from /usr/include/c++/13/string_view:44:
+/usr/include/c++/13/bits/stl_pair.h: In instantiation of ‘struct std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> >’:
+/app/src/dashd/http.cpp:85:40:   required from here
+/usr/include/c++/13/bits/stl_pair.h:193:11: error: ‘std::pair<_T1, _T2>::first’ has incomplete type
+  193 |       _T1 first;                 ///< The first member
+      |           ^~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+In file included from /usr/include/c++/13/bits/char_traits.h:50,
+                 from /usr/include/c++/13/string_view:40:
+/usr/include/c++/13/type_traits: In instantiation of ‘struct std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char> >’:
+/usr/include/c++/13/type_traits:161:35:   required by substitution of ‘template<class ... _Bn> std::__detail::__first_t<std::integral_constant<bool, true>, typename std::enable_if<(bool)(_Bn::value), void>::type ...> std::__detail::__and_fn(int) [with _Bn = {std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::function<heidi::HttpResponse(const heidi::HttpRequest&)> >}]’
+/usr/include/c++/13/type_traits:177:42:   required from ‘struct std::__and_<std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >’
+/usr/include/c++/13/type_traits:182:34:   required from ‘struct std::__not_<std::__and_<std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > > >’
+/usr/include/c++/13/bits/stl_pair.h:247:16:   required from ‘struct std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> >’
+/app/src/dashd/http.cpp:85:40:   required from here
+/usr/include/c++/13/type_traits:1040:25: error: invalid use of incomplete type ‘class std::__cxx11::basic_string<char>’ [-fpermissive]
+ 1040 |       = __bool_constant<__is_constructible(_Tp, _Args...)>;
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/type_traits: In instantiation of ‘constexpr const bool std::is_convertible_v<const std::__cxx11::basic_string<char>&, std::__cxx11::basic_string<char> >’:
+/usr/include/c++/13/bits/stl_pair.h:280:18:   required from ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::function<heidi::HttpResponse(const heidi::HttpRequest&)>&; _T1 = std::__cxx11::basic_string<char>; _T2 = std::function<heidi::HttpResponse(const heidi::HttpRequest&)>]’
+/usr/include/c++/13/bits/stl_pair.h:304:65:   required from ‘struct std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> >’
+/app/src/dashd/http.cpp:85:40:   required from here
+/usr/include/c++/13/type_traits:3364:44: error: invalid use of incomplete type ‘class std::__cxx11::basic_string<char>’ [-fpermissive]
+ 3364 |   inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
+      |                                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/bits/stl_pair.h: In instantiation of ‘struct std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> >’:
+/app/src/dashd/http.cpp:85:40:   required from here
+/usr/include/c++/13/bits/stl_pair.h:304:65: error: ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::function<heidi::HttpResponse(const heidi::HttpRequest&)>&; _T1 = std::__cxx11::basic_string<char>; _T2 = std::function<heidi::HttpResponse(const heidi::HttpRequest&)>]’ called in a constant expression
+  304 |       constexpr explicit(!_S_convertible<const _T1&, const _T2&>())
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/13/bits/stl_pair.h:278:9: note: ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::function<heidi::HttpResponse(const heidi::HttpRequest&)>&; _T1 = std::__cxx11::basic_string<char>; _T2 = std::function<heidi::HttpResponse(const heidi::HttpRequest&)>]’ is not usable as a ‘constexpr’ function because:
+  278 |         _S_convertible()
+      |         ^~~~~~~~~~~~~~
+/app/src/dashd/http.cpp:86:22: error: no match for ‘operator==’ (operand types are ‘std::string_view’ {aka ‘std::basic_string_view<char>’} and ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’)
+   86 |         if (req.path == path) {
+      |             ~~~~~~~~ ^~ ~~~~
+      |                 |       |
+      |                 |       std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type
+      |                 std::string_view {aka std::basic_string_view<char>}
+In file included from /usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:33,
+                 from /usr/include/c++/13/bits/allocator.h:46,
+                 from /usr/include/c++/13/bits/alloc_traits.h:39,
+                 from /usr/include/c++/13/ext/alloc_traits.h:34,
+                 from /usr/include/c++/13/bits/hashtable_policy.h:39,
+                 from /usr/include/c++/13/bits/hashtable.h:35,
+                 from /usr/include/c++/13/bits/unordered_map.h:33,
+                 from /usr/include/c++/13/unordered_map:41,
+                 from /usr/include/c++/13/functional:63,
+                 from /app/src/dashd/../../include/heidi-kernel/http.h:5:
+/usr/include/c++/13/bits/new_allocator.h:215:9: note: candidate: ‘template<class _Up> constexpr bool std::operator==(const __new_allocator<char>&, const __new_allocator<_Tp>&)’ (reversed)
+  215 |         operator==(const __new_allocator&, const __new_allocator<_Up>&)
+      |         ^~~~~~~~
+/usr/include/c++/13/bits/new_allocator.h:215:9: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::__new_allocator<_Tp>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/bits/range_access.h:38,
+                 from /usr/include/c++/13/string_view:43:
+/usr/include/c++/13/bits/stl_iterator.h:534:5: note: candidate: ‘template<class _IteratorL, class _IteratorR> constexpr bool std::operator==(const reverse_iterator<_IteratorL>&, const reverse_iterator<_IteratorR>&) requires requires{{std::operator==::__x->base() == std::operator==::__y->base()} -> decltype(auto) [requires std::convertible_to<<placeholder>, bool>];}’ (reversed)
+  534 |     operator==(const reverse_iterator<_IteratorL>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:534:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ is not derived from ‘const std::reverse_iterator<_IteratorL>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/stl_iterator.h:1678:5: note: candidate: ‘template<class _IteratorL, class _IteratorR> constexpr bool std::operator==(const move_iterator<_IteratorL>&, const move_iterator<_IteratorR>&) requires requires{{std::operator==::__x->base() == std::operator==::__y->base()} -> decltype(auto) [requires std::convertible_to<<placeholder>, bool>];}’ (reversed)
+ 1678 |     operator==(const move_iterator<_IteratorL>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:1678:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ is not derived from ‘const std::move_iterator<_IteratorL>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/string_view:616:5: note: candidate: ‘template<class _CharT, class _Traits> constexpr bool std::operator==(basic_string_view<_CharT, _Traits>, __type_identity_t<basic_string_view<_CharT, _Traits> >)’ (reversed)
+  616 |     operator==(basic_string_view<_CharT, _Traits> __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/string_view:616:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::__cxx11::basic_string<char>’ is not derived from ‘std::basic_string_view<_CharT, _Traits>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/functional:53:
+/usr/include/c++/13/tuple:1919:5: note: candidate: ‘template<class ... _TElements, class ... _UElements> constexpr bool std::operator==(const tuple<_UTypes ...>&, const tuple<_UTypes ...>&)’ (reversed)
+ 1919 |     operator==(const tuple<_TElements...>& __t,
+      |     ^~~~~~~~
+/usr/include/c++/13/tuple:1919:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ is not derived from ‘const std::tuple<_UTypes ...>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/functional:59:
+/usr/include/c++/13/bits/std_function.h:737:5: note: candidate: ‘template<class _Res, class ... _Args> bool std::operator==(const function<_Res(_ArgTypes ...)>&, nullptr_t)’ (reversed)
+  737 |     operator==(const function<_Res(_Args...)>& __f, nullptr_t) noexcept
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/std_function.h:737:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ is not derived from ‘const std::function<_Res(_ArgTypes ...)>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/allocator.h:237:5: note: candidate: ‘template<class _T1, class _T2> constexpr bool std::operator==(const allocator<_CharT>&, const allocator<_T2>&)’ (reversed)
+  237 |     operator==(const allocator<_T1>&, const allocator<_T2>&)
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/allocator.h:237:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ is not derived from ‘const std::allocator<_CharT>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/bits/char_traits.h:42:
+/usr/include/c++/13/bits/postypes.h:192:5: note: candidate: ‘template<class _StateT> bool std::operator==(const fpos<_StateT>&, const fpos<_StateT>&)’
+  192 |     operator==(const fpos<_StateT>& __lhs, const fpos<_StateT>& __rhs)
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/postypes.h:192:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::fpos<_StateT>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/stl_iterator.h:593:5: note: candidate: ‘template<class _Iterator> constexpr bool std::operator==(const reverse_iterator<_IteratorL>&, const reverse_iterator<_IteratorL>&) requires requires{{std::operator==::__x->base() == std::operator==::__y->base()} -> decltype(auto) [requires std::convertible_to<<placeholder>, bool>];}’
+  593 |     operator==(const reverse_iterator<_Iterator>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:593:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::reverse_iterator<_IteratorL>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/stl_iterator.h:1748:5: note: candidate: ‘template<class _Iterator> constexpr bool std::operator==(const move_iterator<_IteratorL>&, const move_iterator<_IteratorL>&)’
+ 1748 |     operator==(const move_iterator<_Iterator>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:1748:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::move_iterator<_IteratorL>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/stl_pair.h:812:5: note: candidate: ‘template<class _T1, class _T2> constexpr bool std::operator==(const pair<_T1, _T2>&, const pair<_T1, _T2>&)’
+  812 |     operator==(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y)
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_pair.h:812:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::pair<_T1, _T2>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/string_view:609:5: note: candidate: ‘template<class _CharT, class _Traits> constexpr bool std::operator==(basic_string_view<_CharT, _Traits>, basic_string_view<_CharT, _Traits>)’
+  609 |     operator==(basic_string_view<_CharT, _Traits> __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/string_view:609:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::__cxx11::basic_string<char>’ is not derived from ‘std::basic_string_view<_CharT, _Traits>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/string_view:616:5: note: candidate: ‘constexpr bool std::operator==(basic_string_view<_CharT, _Traits>, __type_identity_t<basic_string_view<_CharT, _Traits> >) [with _CharT = char; _Traits = char_traits<char>; __type_identity_t<basic_string_view<_CharT, _Traits> > = basic_string_view<char>]’
+  616 |     operator==(basic_string_view<_CharT, _Traits> __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/string_view:617:70: note:   no known conversion for argument 2 from ‘std::tuple_element<0, const std::pair<std::__cxx11::basic_string<char>, std::function<heidi::HttpResponse(const heidi::HttpRequest&)> > >::type’ to ‘std::__type_identity_t<std::basic_string_view<char> >’ {aka ‘std::basic_string_view<char>’}
+  617 |                __type_identity_t<basic_string_view<_CharT, _Traits>> __y)
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/usr/include/c++/13/bits/unordered_map.h:2143:5: note: candidate: ‘template<class _Key1, class _Tp1, class _Hash1, class _Pred1, class _Alloc1> bool std::operator==(const unordered_map<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&, const unordered_map<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&)’
+ 2143 |     operator==(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/unordered_map.h:2143:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::unordered_map<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/unordered_map.h:2157:5: note: candidate: ‘template<class _Key1, class _Tp1, class _Hash1, class _Pred1, class _Alloc1> bool std::operator==(const unordered_multimap<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&, const unordered_multimap<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&)’
+ 2157 |     operator==(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/unordered_map.h:2157:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::unordered_multimap<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/vector:66,
+                 from /usr/include/c++/13/functional:64:
+/usr/include/c++/13/bits/stl_vector.h:2040:5: note: candidate: ‘template<class _Tp, class _Alloc> constexpr bool std::operator==(const vector<_Tp, _Alloc>&, const vector<_Tp, _Alloc>&)’
+ 2040 |     operator==(const vector<_Tp, _Alloc>& __x, const vector<_Tp, _Alloc>& __y)
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_vector.h:2040:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::vector<_Tp, _Alloc>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/functional:65:
+/usr/include/c++/13/array:297:5: note: candidate: ‘template<class _Tp, long unsigned int _Nm> constexpr bool std::operator==(const array<_Tp, _Nm>&, const array<_Tp, _Nm>&)’
+  297 |     operator==(const array<_Tp, _Nm>& __one, const array<_Tp, _Nm>& __two)
+      |     ^~~~~~~~
+/usr/include/c++/13/array:297:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::array<_Tp, _Nm>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/stl_map.h:1513:5: note: candidate: ‘template<class _Key, class _Tp, class _Compare, class _Alloc> bool std::operator==(const map<_Key, _Tp, _Compare, _Allocator>&, const map<_Key, _Tp, _Compare, _Allocator>&)’
+ 1513 |     operator==(const map<_Key, _Tp, _Compare, _Alloc>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_map.h:1513:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::map<_Key, _Tp, _Compare, _Allocator>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+In file included from /usr/include/c++/13/map:64:
+/usr/include/c++/13/bits/stl_multimap.h:1134:5: note: candidate: ‘template<class _Key, class _Tp, class _Compare, class _Alloc> bool std::operator==(const multimap<_Key, _Tp, _Compare, _Allocator>&, const multimap<_Key, _Tp, _Compare, _Allocator>&)’
+ 1134 |     operator==(const multimap<_Key, _Tp, _Compare, _Alloc>& __x,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_multimap.h:1134:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:86:25: note:   ‘std::string_view’ {aka ‘std::basic_string_view<char>’} is not derived from ‘const std::multimap<_Key, _Tp, _Compare, _Allocator>’
+   86 |         if (req.path == path) {
+      |                         ^~~~
+/usr/include/c++/13/bits/allocator.h:216:7: note: candidate: ‘constexpr bool std::operator==(const allocator<char>&, const allocator<char>&)’
+  216 |       operator==(const allocator&, const allocator&) _GLIBCXX_NOTHROW
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/allocator.h:216:18: note:   no known conversion for argument 1 from ‘std::string_view’ {aka ‘std::basic_string_view<char>’} to ‘const std::allocator<char>&’
+  216 |       operator==(const allocator&, const allocator&) _GLIBCXX_NOTHROW
+      |                  ^~~~~~~~~~~~~~~~
+/app/src/dashd/http.cpp:98:17: error: variable ‘std::string response’ has initializer but incomplete type
+   98 |     std::string response = format_response(resp);
+      |                 ^~~~~~~~
+/app/src/dashd/http.cpp:98:43: error: invalid use of incomplete type ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   98 |     std::string response = format_response(resp);
+      |                            ~~~~~~~~~~~~~~~^~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp: In member function ‘heidi::HttpRequest heidi::HttpServer::parse_request(const std::string&) const’:
+/app/src/dashd/http.cpp:105:18: error: invalid use of incomplete type ‘const std::string’ {aka ‘const class std::__cxx11::basic_string<char>’}
+  105 |     size_t pos = data.find("\r\n\r\n");
+      |                  ^~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp:107:29: error: incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’} used in nested name specifier
+  107 |     if (pos != std::string::npos) {
+      |                             ^~~~
+/app/src/dashd/http.cpp:108:42: error: no matching function for call to ‘std::basic_string_view<char>::basic_string_view(const std::string&)’
+  108 |         body_view = std::string_view(data).substr(pos + 4);
+      |                                          ^
+/usr/include/c++/13/string_view:171:9: note: candidate: ‘template<class _Range, class _DRange>  requires !(is_same_v<_DRange, std::basic_string_view>) && (contiguous_range<_Range>) && (sized_range<_Range>) && (is_same_v<typename std::__detail::__iter_traits_impl<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type, std::indirectly_readable_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type> >::__iter_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type, std::indirectly_readable_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type> >::value_type, _CharT>) && !(is_convertible_v<_Range, const _CharT*>) && !requires(_DRange& __d) {__d->__conv_op ();} constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view(_Range&&) [with _DRange = _Range; _CharT = char; _Traits = std::char_traits<char>]’
+  171 |         basic_string_view(_Range&& __r)
+      |         ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:171:9: note:   template argument deduction/substitution failed:
+/usr/include/c++/13/string_view:171:9: note: constraints not satisfied
+In file included from /usr/include/c++/13/string_view:48:
+/usr/include/c++/13/bits/ranges_base.h: In substitution of ‘template<class _Range, class _DRange>  requires !(is_same_v<_DRange, std::basic_string_view>) && (contiguous_range<_Range>) && (sized_range<_Range>) && (is_same_v<typename std::__detail::__iter_traits_impl<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type, std::indirectly_readable_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type> >::__iter_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type, std::indirectly_readable_traits<typename std::remove_cvref<decltype(std::ranges::__cust_access::__begin((declval<_Range&>)()))>::type> >::value_type, _CharT>) && !(is_convertible_v<_Range, const _CharT*>) && !requires(_DRange& __d) {__d->__conv_op ();} constexpr std::basic_string_view<char>::basic_string_view(_Range&&) [with _Range = char; _DRange = std::char_traits<char>]’:
+/app/src/dashd/http.cpp:108:42:   required from here
+/usr/include/c++/13/bits/ranges_base.h:501:13:   required for the satisfaction of ‘range<_Tp>’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:590:13:   required for the satisfaction of ‘input_range<_Tp>’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:594:13:   required for the satisfaction of ‘forward_range<_Tp>’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:599:13:   required for the satisfaction of ‘bidirectional_range<_Tp>’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:604:13:   required for the satisfaction of ‘random_access_range<_Tp>’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:609:13:   required for the satisfaction of ‘contiguous_range<_Range>’ [with _Range = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:501:21:   in requirements with ‘_Tp& __t’ [with _Tp = const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&]
+/usr/include/c++/13/bits/ranges_base.h:503:22: note: the required expression ‘std::ranges::__cust::begin(__t)’ is invalid
+  503 |         ranges::begin(__t);
+      |         ~~~~~~~~~~~~~^~~~~
+/usr/include/c++/13/bits/ranges_base.h:504:20: note: the required expression ‘std::ranges::__cust::end(__t)’ is invalid
+  504 |         ranges::end(__t);
+      |         ~~~~~~~~~~~^~~~~
+cc1plus: note: set ‘-fconcepts-diagnostics-depth=’ to at least 2 for more detail
+/usr/include/c++/13/string_view:155:9: note: candidate: ‘template<class _It, class _End>  requires (contiguous_iterator<_It>) && (sized_sentinel_for<_End, _It>) && ((same_as<typename std::__detail::__iter_traits_impl<typename std::remove_cvref<_It2>::type, std::indirectly_readable_traits<typename std::remove_cvref<_It2>::type> >::type::value_type, _CharT>) && !(convertible_to<_End, long unsigned int>)) constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view(_It, _End) [with _End = _It; _CharT = char; _Traits = std::char_traits<char>]’
+  155 |         basic_string_view(_It __first, _End __last)
+      |         ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:155:9: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:108:42: note:   candidate expects 2 arguments, 1 provided
+  108 |         body_view = std::string_view(data).substr(pos + 4);
+      |                                          ^
+/usr/include/c++/13/string_view:146:7: note: candidate: ‘constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view(const _CharT*, size_type) [with _CharT = char; _Traits = std::char_traits<char>; size_type = long unsigned int]’
+  146 |       basic_string_view(const _CharT* __str, size_type __len) noexcept
+      |       ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:146:7: note:   candidate expects 2 arguments, 1 provided
+/usr/include/c++/13/string_view:140:7: note: candidate: ‘constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>]’
+  140 |       basic_string_view(const _CharT* __str) noexcept
+      |       ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:140:39: note:   no known conversion for argument 1 from ‘const std::string’ {aka ‘const std::__cxx11::basic_string<char>’} to ‘const char*’
+  140 |       basic_string_view(const _CharT* __str) noexcept
+      |                         ~~~~~~~~~~~~~~^~~~~
+/usr/include/c++/13/string_view:136:17: note: candidate: ‘constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view(const std::basic_string_view<_CharT, _Traits>&) [with _CharT = char; _Traits = std::char_traits<char>]’
+  136 |       constexpr basic_string_view(const basic_string_view&) noexcept = default;
+      |                 ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:136:35: note:   no known conversion for argument 1 from ‘const std::string’ {aka ‘const std::__cxx11::basic_string<char>’} to ‘const std::basic_string_view<char>&’
+  136 |       constexpr basic_string_view(const basic_string_view&) noexcept = default;
+      |                                   ^~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:132:7: note: candidate: ‘constexpr std::basic_string_view<_CharT, _Traits>::basic_string_view() [with _CharT = char; _Traits = std::char_traits<char>]’
+  132 |       basic_string_view() noexcept
+      |       ^~~~~~~~~~~~~~~~~
+/usr/include/c++/13/string_view:132:7: note:   candidate expects 0 arguments, 1 provided
+/app/src/dashd/http.cpp:111:23: error: invalid use of incomplete type ‘const std::string’ {aka ‘const class std::__cxx11::basic_string<char>’}
+  111 |     size_t line_end = data.find("\r\n");
+      |                       ^~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp:112:34: error: incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’} used in nested name specifier
+  112 |     if (line_end != std::string::npos) {
+      |                                  ^~~~
+/app/src/dashd/http.cpp:113:39: error: invalid use of incomplete type ‘const std::string’ {aka ‘const class std::__cxx11::basic_string<char>’}
+  113 |         std::string_view request_line(data.c_str(), line_end);
+      |                                       ^~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/app/src/dashd/http.cpp:116:33: error: incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’} used in nested name specifier
+  116 |         if (sp1 != std::string::npos && sp2 != std::string::npos) {
+      |                                 ^~~~
+/app/src/dashd/http.cpp:116:61: error: incomplete type ‘std::string’ {aka ‘std::__cxx11::basic_string<char>’} used in nested name specifier
+  116 |         if (sp1 != std::string::npos && sp2 != std::string::npos) {
+      |                                                             ^~~~
+/app/src/dashd/http.cpp: At global scope:
+/app/src/dashd/http.cpp:126:67: error: return type ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’} is incomplete
+  126 | std::string HttpServer::format_response(const HttpResponse& resp) const {
+      |                                                                   ^~~~~
+/app/src/dashd/http.cpp: In member function ‘void heidi::HttpServer::format_response(const heidi::HttpResponse&) const’:
+/app/src/dashd/http.cpp:127:17: error: variable ‘std::string resp_str’ has initializer but incomplete type
+  127 |     std::string resp_str = "HTTP/1.1 ";
+      |                 ^~~~~~~~
+/app/src/dashd/http.cpp:128:22: error: ‘to_string’ is not a member of ‘std’
+  128 |     resp_str += std::to_string(resp.status_code) + " " + std::string(resp.status_text) + "\r\n";
+      |                      ^~~~~~~~~
+/app/src/dashd/http.cpp:8:1: note: ‘std::to_string’ is defined in header ‘<string>’; did you forget to ‘#include <string>’?
+    7 | #include <unistd.h>
+  +++ |+#include <string>
+    8 |
+/app/src/dashd/http.cpp:128:86: error: invalid use of incomplete type ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+  128 |     resp_str += std::to_string(resp.status_code) + " " + std::string(resp.status_text) + "\r\n";
+      |                                                                                      ^
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘std::string’ {aka ‘class std::__cxx11::basic_string<char>’}
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/bits/stl_pair.h: In instantiation of ‘struct std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’:
+/app/src/dashd/http.cpp:130:42:   required from here
+/usr/include/c++/13/bits/stl_pair.h:193:11: error: ‘std::pair<_T1, _T2>::first’ has incomplete type
+  193 |       _T1 first;                 ///< The first member
+      |           ^~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/bits/stl_pair.h:194:11: error: ‘std::pair<_T1, _T2>::second’ has incomplete type
+  194 |       _T2 second;                ///< The second member
+      |           ^~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/type_traits: In instantiation of ‘struct std::__is_implicitly_default_constructible<const std::__cxx11::basic_string<char> >’:
+/usr/include/c++/13/type_traits:161:35:   required by substitution of ‘template<class ... _Bn> std::__detail::__first_t<std::integral_constant<bool, true>, typename std::enable_if<(bool)(_Bn::value), void>::type ...> std::__detail::__and_fn(int) [with _Bn = {std::__is_implicitly_default_constructible<const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >}]’
+/usr/include/c++/13/type_traits:177:42:   required from ‘struct std::__and_<std::__is_implicitly_default_constructible<const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >’
+/usr/include/c++/13/type_traits:182:34:   required from ‘struct std::__not_<std::__and_<std::__is_implicitly_default_constructible<const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__is_implicitly_default_constructible<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >’
+/usr/include/c++/13/bits/stl_pair.h:247:16:   required from ‘struct std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’
+/app/src/dashd/http.cpp:130:42:   required from here
+/usr/include/c++/13/type_traits:1040:25: error: invalid use of incomplete type ‘const class std::__cxx11::basic_string<char>’ [-fpermissive]
+ 1040 |       = __bool_constant<__is_constructible(_Tp, _Args...)>;
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/type_traits: In instantiation of ‘constexpr const bool std::is_convertible_v<const std::__cxx11::basic_string<char>&, const std::__cxx11::basic_string<char> >’:
+/usr/include/c++/13/bits/stl_pair.h:280:18:   required from ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::__cxx11::basic_string<char>&; _T1 = const std::__cxx11::basic_string<char>; _T2 = std::__cxx11::basic_string<char>]’
+/usr/include/c++/13/bits/stl_pair.h:304:65:   required from ‘struct std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’
+/app/src/dashd/http.cpp:130:42:   required from here
+/usr/include/c++/13/type_traits:3364:44: error: invalid use of incomplete type ‘const class std::__cxx11::basic_string<char>’ [-fpermissive]
+ 3364 |   inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
+      |                                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/stringfwd.h:72:11: note: declaration of ‘class std::__cxx11::basic_string<char>’
+   72 |     class basic_string;
+      |           ^~~~~~~~~~~~
+/usr/include/c++/13/bits/stl_pair.h: In instantiation of ‘struct std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >’:
+/app/src/dashd/http.cpp:130:42:   required from here
+/usr/include/c++/13/bits/stl_pair.h:304:65: error: ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::__cxx11::basic_string<char>&; _T1 = const std::__cxx11::basic_string<char>; _T2 = std::__cxx11::basic_string<char>]’ called in a constant expression
+  304 |       constexpr explicit(!_S_convertible<const _T1&, const _T2&>())
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/13/bits/stl_pair.h:278:9: note: ‘static constexpr bool std::pair<_T1, _T2>::_S_convertible() [with _U1 = const std::__cxx11::basic_string<char>&; _U2 = const std::__cxx11::basic_string<char>&; _T1 = const std::__cxx11::basic_string<char>; _T2 = std::__cxx11::basic_string<char>]’ is not usable as a ‘constexpr’ function because:
+  278 |         _S_convertible()
+      |         ^~~~~~~~~~~~~~
+/app/src/dashd/http.cpp:131:25: error: no match for ‘operator+’ (operand types are ‘std::tuple_element<0, const std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >::type’ and ‘const char [3]’)
+  131 |         resp_str += key + ": " + value + "\r\n";
+      |                     ~~~ ^ ~~~~
+      |                     |     |
+      |                     |     const char [3]
+      |                     std::tuple_element<0, const std::pair<const std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> > >::type
+/usr/include/c++/13/bits/stl_iterator.h:634:5: note: candidate: ‘template<class _Iterator> constexpr std::reverse_iterator<_IteratorL> std::operator+(typename reverse_iterator<_IteratorL>::difference_type, const reverse_iterator<_IteratorL>&)’
+  634 |     operator+(typename reverse_iterator<_Iterator>::difference_type __n,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:634:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:131:27: note:   mismatched types ‘const std::reverse_iterator<_IteratorL>’ and ‘const char [3]’
+  131 |         resp_str += key + ": " + value + "\r\n";
+      |                           ^~~~
+/usr/include/c++/13/bits/stl_iterator.h:1808:5: note: candidate: ‘template<class _Iterator> constexpr std::move_iterator<_IteratorL> std::operator+(typename move_iterator<_IteratorL>::difference_type, const move_iterator<_IteratorL>&)’
+ 1808 |     operator+(typename move_iterator<_Iterator>::difference_type __n,
+      |     ^~~~~~~~
+/usr/include/c++/13/bits/stl_iterator.h:1808:5: note:   template argument deduction/substitution failed:
+/app/src/dashd/http.cpp:131:27: note:   mismatched types ‘const std::move_iterator<_IteratorL>’ and ‘const char [3]’
+  131 |         resp_str += key + ": " + value + "\r\n";
+      |                           ^~~~
+/app/src/dashd/http.cpp:134:43: error: ‘to_string’ is not a member of ‘std’
+  134 |     resp_str += "Content-Length: " + std::to_string(resp.body.size()) + "\r\n";
+      |                                           ^~~~~~~~~
+/app/src/dashd/http.cpp:134:43: note: ‘std::to_string’ is defined in header ‘<string>’; did you forget to ‘#include <string>’?
+gmake[2]: *** [src/dashd/CMakeFiles/heidi-dashd.dir/build.make:90: src/dashd/CMakeFiles/heidi-dashd.dir/http.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:214: src/dashd/CMakeFiles/heidi-dashd.dir/all] Error 2
+gmake: *** [Makefile:91: all] Error 2
