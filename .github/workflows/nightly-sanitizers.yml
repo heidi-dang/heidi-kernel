@@ -1,0 +1,88 @@
+name: nightly-sanitizers
+
+on:
+  schedule:
+    - cron: "0 17 * * *" # daily 17:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-sanitizers
+  cancel-in-progress: true
+
+jobs:
+  sanitize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (no submodules, no creds)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Init submodules manually
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Install deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang python3
+
+      - name: Detect sanitizer presets
+        id: presets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          out = {"asan":"0","ubsan":"0","tsan":"0"}
+          if os.path.exists("CMakePresets.json"):
+            data = json.load(open("CMakePresets.json","r",encoding="utf-8"))
+            names = {p.get("name") for p in (data.get("configurePresets") or []) if p.get("name")}
+            for k in out:
+              out[k] = "1" if k in names else "0"
+          for k,v in out.items():
+            print(f"{k}={v}")
+          PY >> "$GITHUB_OUTPUT"
+
+      - name: ASAN
+        if: steps.presets.outputs.asan == '1'
+        shell: bash
+        env:
+          ASAN_OPTIONS: "detect_leaks=0"
+        run: |
+          set -euo pipefail
+          cmake --preset asan
+          cmake --build --preset asan
+          ctest --preset asan --output-on-failure
+
+      - name: UBSAN
+        if: steps.presets.outputs.ubsan == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset ubsan
+          cmake --build --preset ubsan
+          ctest --preset ubsan --output-on-failure
+
+      - name: TSAN
+        if: steps.presets.outputs.tsan == '1'
+        shell: bash
+        env:
+          TSAN_OPTIONS: "halt_on_error=1"
+        run: |
+          set -euo pipefail
+          cmake --preset tsan
+          cmake --build --preset tsan
+          ctest --preset tsan --output-on-failure
+
+      - name: No sanitizer presets present
+        if: steps.presets.outputs.asan != '1' && steps.presets.outputs.ubsan != '1' && steps.presets.outputs.tsan != '1'
+        shell: bash
+        run: echo "No sanitizer presets found (asan/ubsan/tsan). Skipping."

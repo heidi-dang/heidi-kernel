@@ -1,0 +1,41 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Configure
+        run: cmake --preset debug
+
+      - name: Build
+        run: cmake --build --preset debug
+
+      - name: Package
+        run: |
+          mkdir -p release
+          find build/debug -type f -executable ! -name "*.so*" -exec cp {} release/ \;
+          tar -czvf heidi-kernel-${GITHUB_TAG_NAME#v}-linux-x64.tar.gz -C release .
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: heidi-kernel-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
