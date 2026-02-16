@@ -21,7 +21,7 @@ TEST_CASE("EventLoop tick callback is called", "[event_loop]") {
     heidi::EventLoop loop{std::chrono::milliseconds{20}};
     int tick_count = 0;
 
-    loop.set_tick_callback([&tick_count](std::chrono::ms) {
+    loop.set_tick_callback([&tick_count](std::chrono::milliseconds) {
         ++tick_count;
     });
 
