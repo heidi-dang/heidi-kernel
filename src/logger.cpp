@@ -64,7 +64,7 @@ void Logger::log(LogLevel level, std::string_view msg) {
     out_ << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S")
          << "." << std::setfill('0') << std::setw(3) << ms.count()
          << " [" << level_to_string(level) << "] "
-         << msg << "\n" << std::flush;
+         << msg << "\n";
 }
 
 }
