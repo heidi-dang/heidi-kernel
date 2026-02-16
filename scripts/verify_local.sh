@@ -28,11 +28,13 @@ pass ".local is a gitlink (submodule)"
 
 # Gate 2: Check for emojis in recent commits
 echo "Checking for emojis in commits..."
-EMOJI_PATTERN='(\ud83d\ude00|\ud83d\ude03|\ud83d\ude04|[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF])'
+# Use a broad range of emojis from the SMP (Supplemental Multilingual Plane)
+# and ensure we don't match standard ASCII characters.
+EMOJI_PATTERN='[\x{1F300}-\x{1F9FF}]'
 FOUND=0
 for commit in $(git log --format=%H -5 HEAD 2>/dev/null || echo "HEAD"); do
   MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-  if echo "$MSG" | grep -E "$EMOJI_PATTERN" >/dev/null 2>&1; then
+  if LANG=C.UTF-8 grep -qP "$EMOJI_PATTERN" <<< "$MSG"; then
     warn "Emoji found in commit $commit"
     FOUND=1
   fi
