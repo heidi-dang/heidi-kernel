@@ -34,7 +34,7 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
         } else if (!starts_with(arg, "-")) {
             return Result<Config>::error(
                 ErrorCode::InvalidArgument,
-                std::string_view{"Unknown argument: "} + arg);
+                std::string_view{"Unknown argument"});
         }
     }
 
