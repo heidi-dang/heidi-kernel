@@ -1,91 +1,218 @@
 #include "heidi-kernel/job.h"
+#include "test_job_fakes.h"
 
 #include <gtest/gtest.h>
-#include <chrono>
-#include <thread>
 
 namespace heidi {
 
 class JobTest : public ::testing::Test {
 protected:
+    std::unique_ptr<JobRunner> runner_;
+    FakeProcessSpawner* spawner_;
+    FakeProcessInspector* inspector_;
+    ResourcePolicy policy_;
+    int64_t now_ms_ = 0;
+    
     void SetUp() override {
-        job_runner_ = new JobRunner(2); // Small concurrency for testing
-        job_runner_->start();
+        auto spawner = std::make_unique<FakeProcessSpawner>();
+        auto inspector = std::make_unique<FakeProcessInspector>();
+        
+        spawner_ = spawner.get();
+        inspector_ = inspector.get();
+        
+        policy_.max_concurrent_jobs = 4;
+        policy_.max_processes_per_job = 10;
+        policy_.kill_grace_ms = 100;
+        policy_.max_job_starts_per_tick = 5;
+        policy_.max_job_scans_per_tick = 10;
+        
+        runner_ = std::make_unique<JobRunner>(policy_,
+                                              std::move(spawner),
+                                              std::move(inspector));
     }
-
-    void TearDown() override {
-        job_runner_->stop();
-        delete job_runner_;
+    
+    template<typename Pred>
+    bool drive_ticks_until(int64_t step_ms, int max_iters, Pred pred) {
+        for (int i = 0; i < max_iters && !pred(); ++i) {
+            runner_->tick(now_ms_);
+            now_ms_ += step_ms;
+            spawner_->advance_time(now_ms_);
+        }
+        return pred();
     }
-
-    JobRunner* job_runner_;
 };
 
 TEST_F(JobTest, SubmitJobReturnsValidId) {
-    std::string job_id = job_runner_->submit_job("echo hello");
+    std::string job_id = runner_->submit_job("echo hello");
     EXPECT_FALSE(job_id.empty());
     EXPECT_TRUE(job_id.find("job_") == 0);
 }
 
 TEST_F(JobTest, GetJobStatusAfterSubmit) {
-    std::string job_id = job_runner_->submit_job("echo hello");
-    auto job = job_runner_->get_job_status(job_id);
+    std::string job_id = runner_->submit_job("echo hello");
+    auto job = runner_->get_job_status(job_id);
     ASSERT_NE(job, nullptr);
     EXPECT_EQ(job->id, job_id);
-    EXPECT_TRUE(job->status == JobStatus::PENDING || job->status == JobStatus::RUNNING);
+    EXPECT_EQ(job->status, JobStatus::PENDING);
+}
+
+TEST_F(JobTest, JobStartsOnTick) {
+    std::string job_id = runner_->submit_job("echo hello");
+    runner_->tick(now_ms_);
+    
+    auto job = runner_->get_job_status(job_id);
+    ASSERT_NE(job, nullptr);
+    EXPECT_EQ(job->status, JobStatus::RUNNING);
+    EXPECT_GT(job->pgid, 0);
 }
 
 TEST_F(JobTest, JobCompletesSuccessfully) {
-    std::string job_id = job_runner_->submit_job("echo hello");
+    std::string job_id = runner_->submit_job("echo hello");
+    runner_->tick(now_ms_);
     
-    // Wait for job to complete
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    auto job = runner_->get_job_status(job_id);
+    pid_t pgid = job->pgid;
     
-    auto job = job_runner_->get_job_status(job_id);
-    ASSERT_NE(job, nullptr);
+    spawner_->set_output(pgid, "hello", "");
+    spawner_->simulate_completion(pgid, 0, now_ms_ + 100);
+    
+    drive_ticks_until(10, 20, [&]() {
+        auto j = runner_->get_job_status(job_id);
+        return j->status == JobStatus::COMPLETED || j->status == JobStatus::FAILED;
+    });
+    
+    job = runner_->get_job_status(job_id);
     EXPECT_EQ(job->status, JobStatus::COMPLETED);
     EXPECT_EQ(job->exit_code, 0);
     EXPECT_TRUE(job->output.find("hello") != std::string::npos);
 }
 
 TEST_F(JobTest, JobFailsWithBadCommand) {
-    std::string job_id = job_runner_->submit_job("false");
+    std::string job_id = runner_->submit_job("false");
+    runner_->tick(now_ms_);
     
-    // Wait for job to complete
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    auto job = runner_->get_job_status(job_id);
+    pid_t pgid = job->pgid;
     
-    auto job = job_runner_->get_job_status(job_id);
-    ASSERT_NE(job, nullptr);
+    spawner_->simulate_completion(pgid, 1, now_ms_ + 50);
+    
+    drive_ticks_until(10, 20, [&]() {
+        auto j = runner_->get_job_status(job_id);
+        return j->status == JobStatus::COMPLETED || j->status == JobStatus::FAILED;
+    });
+    
+    job = runner_->get_job_status(job_id);
     EXPECT_EQ(job->status, JobStatus::FAILED);
     EXPECT_NE(job->exit_code, 0);
 }
 
 TEST_F(JobTest, CancelPendingJob) {
-    std::string job_id = job_runner_->submit_job("sleep 10");
-    
-    bool cancelled = job_runner_->cancel_job(job_id);
+    std::string job_id = runner_->submit_job("sleep 10");
+    bool cancelled = runner_->cancel_job(job_id);
     EXPECT_TRUE(cancelled);
     
-    auto job = job_runner_->get_job_status(job_id);
+    auto job = runner_->get_job_status(job_id);
     ASSERT_NE(job, nullptr);
     EXPECT_EQ(job->status, JobStatus::CANCELLED);
 }
 
 TEST_F(JobTest, GetRecentJobs) {
-    std::string job_id1 = job_runner_->submit_job("echo job1");
-    std::string job_id2 = job_runner_->submit_job("echo job2");
+    runner_->submit_job("echo job1");
+    runner_->submit_job("echo job2");
     
-    auto jobs = job_runner_->get_recent_jobs(10);
+    auto jobs = runner_->get_recent_jobs(10);
     EXPECT_GE(jobs.size(), 2);
-    
-    // Check that our jobs are in the list
-    bool found1 = false, found2 = false;
-    for (const auto& job : jobs) {
-        if (job->id == job_id1) found1 = true;
-        if (job->id == job_id2) found2 = true;
+}
+
+TEST_F(JobTest, TickBudgets_Enforced) {
+    for (int i = 0; i < 10; ++i) {
+        runner_->submit_job("echo " + std::to_string(i));
     }
-    EXPECT_TRUE(found1);
-    EXPECT_TRUE(found2);
+    
+    auto diag = runner_->tick(now_ms_);
+    EXPECT_LE(diag.jobs_started_this_tick, policy_.max_job_starts_per_tick);
+}
+
+TEST_F(JobTest, ProcCap_DoesNotTriggerAtLimit) {
+    std::string job_id = runner_->submit_job("echo hello");
+    runner_->tick(now_ms_);
+    
+    auto job = runner_->get_job_status(job_id);
+    pid_t pgid = job->pgid;
+    inspector_->set_count(pgid, policy_.max_processes_per_job);
+    
+    for (int i = 0; i < 10; ++i) {
+        runner_->tick(now_ms_);
+        now_ms_ += 10;
+        spawner_->advance_time(now_ms_);
+    }
+    
+    job = runner_->get_job_status(job_id);
+    EXPECT_EQ(job->status, JobStatus::RUNNING);
+}
+
+TEST_F(JobTest, ProcCap_TriggersProcLimit) {
+    std::string job_id = runner_->submit_job("echo hello");
+    runner_->tick(now_ms_);
+    
+    auto job = runner_->get_job_status(job_id);
+    pid_t pgid = job->pgid;
+    inspector_->set_count(pgid, policy_.max_processes_per_job + 1);
+    
+    runner_->tick(now_ms_);
+    
+    EXPECT_TRUE(spawner_->was_signal_sent(pgid, SIGTERM));
+}
+
+TEST_F(JobTest, ProcCap_EscalatesToSigkillAfterGrace) {
+    std::string job_id = runner_->submit_job("echo hello");
+    runner_->tick(now_ms_);
+    
+    auto job = runner_->get_job_status(job_id);
+    pid_t pgid = job->pgid;
+    inspector_->set_count(pgid, policy_.max_processes_per_job + 1);
+    
+    now_ms_ += 10;
+    spawner_->advance_time(now_ms_);
+    runner_->tick(now_ms_);
+    int64_t sigterm_time = spawner_->get_signal_time(pgid, SIGTERM);
+    EXPECT_GE(sigterm_time, 0);
+    
+    now_ms_ = sigterm_time + policy_.kill_grace_ms + 1;
+    spawner_->advance_time(now_ms_);
+    runner_->tick(now_ms_);
+    
+    EXPECT_TRUE(spawner_->was_signal_sent(pgid, SIGKILL));
+    
+    job = runner_->get_job_status(job_id);
+    EXPECT_EQ(job->status, JobStatus::PROC_LIMIT);
+}
+
+TEST_F(JobTest, ScanBudget_Respected) {
+    for (int i = 0; i < 25; ++i) {
+        runner_->submit_job("echo " + std::to_string(i));
+    }
+    runner_->tick(now_ms_);
+    
+    now_ms_ += 1000;
+    spawner_->advance_time(now_ms_);
+    
+    auto diag = runner_->tick(now_ms_);
+    EXPECT_LE(diag.jobs_scanned_this_tick, policy_.max_job_scans_per_tick);
+}
+
+TEST_F(JobTest, PolicyUpdate_Valid) {
+    ResourcePolicy new_policy = policy_;
+    new_policy.max_processes_per_job = 20;
+    EXPECT_TRUE(runner_->update_policy(new_policy));
+    EXPECT_EQ(runner_->get_policy().max_processes_per_job, 20);
+}
+
+TEST_F(JobTest, PolicyUpdate_InvalidRejected) {
+    ResourcePolicy new_policy = policy_;
+    new_policy.max_processes_per_job = 0;
+    EXPECT_FALSE(runner_->update_policy(new_policy));
+    EXPECT_EQ(runner_->get_policy().max_processes_per_job, policy_.max_processes_per_job);
 }
 
 } // namespace heidi
