@@ -13,7 +13,7 @@
 
 namespace {
 
-std::sig_atomic_t g_running = 1;
+volatile std::sig_atomic_t g_running = 1;
 std::mutex g_status_mutex;
 std::string g_kernel_status = "{\"error\":\"not connected\"}";
 
