@@ -2,6 +2,7 @@
 #include "heidi-kernel/metrics.h"
 #include "heidi-kernel/resource_governor.h"
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <chrono>
