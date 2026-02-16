@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: false
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: heidi-kernel-ubuntu-x64
+          - os: macos-latest
+            artifact: heidi-kernel-macos-x64
+          - os: windows-latest
+            artifact: heidi-kernel-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Package (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p ${{ matrix.artifact }}
+          cp build/release/heidi-kernel ${{ matrix.artifact }}/ 2>/dev/null || true
+          cp LICENSE ${{ matrix.artifact }}/
+          cp README.md ${{ matrix.artifact }}/
+          tar czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}/
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir -p ${{ matrix.artifact }}
+          copy build\release\heidi-kernel.exe ${{ matrix.artifact }}\ 2>/dev/null || echo "No binary found"
+          copy LICENSE ${{ matrix.artifact }}\
+          copy README.md ${{ matrix.artifact }}\
+          powershell -Command "Compress-Archive -Path ${{ matrix.artifact }} -DestinationPath ${{ matrix.artifact }}.zip"
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

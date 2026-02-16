@@ -13,7 +13,10 @@ concurrency:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,10 +71,26 @@ jobs:
           chmod +x scripts/verify_local.sh
           ./scripts/verify_local.sh
 
-      - name: Install dependencies
+      - name: Secret scan
+        run: |
+          chmod +x scripts/scan_secrets.sh
+          ./scripts/scan_secrets.sh
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build clang clang-tidy clang-format
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake ninja
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake ninja
 
       - name: Configure + Build (Debug)
         run: |
