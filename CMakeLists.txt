@@ -9,7 +9,6 @@ option(ENABLE_TESTS "Build tests" ON)
 
 include(GNUInstallDirs)
 
-add_library(heidi-kernel-lib STATIC)
 add_subdirectory(src)
 
 add_executable(heidi-kernel)
