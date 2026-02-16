@@ -14,13 +14,13 @@ TEST_CASE("Result<int> error", "[result]") {
     REQUIRE(result.error().code == heidi::ErrorCode::InvalidArgument);
 }
 
-TEST_CASE("Result<void> ok", "[result]") {
-    auto result = heidi::Result<void>::ok();
+TEST_CASE("Result<void> success", "[result]") {
+    auto result = heidi::Result<void>::success();
     REQUIRE(result.ok() == true);
 }
 
-TEST_CASE("Result<void> error", "[result]") {
-    auto result = heidi::Result<void>::error(heidi::ErrorCode::ShutdownRequested, "stopping");
+TEST_CASE("Result<void> failure", "[result]") {
+    auto result = heidi::Result<void>::failure(heidi::ErrorCode::ShutdownRequested, "stopping");
     REQUIRE(result.ok() == false);
     REQUIRE(result.error().code == heidi::ErrorCode::ShutdownRequested);
 }

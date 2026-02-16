@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iostream>
 #include <ostream>
 #include <string_view>
 

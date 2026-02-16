@@ -53,8 +53,8 @@ private:
 template<>
 class Result<void> {
 public:
-    static Result ok() { return Result(); }
-    static Result error(ErrorCode code, std::string_view msg) {
+    static Result success() { return Result(); }
+    static Result failure(ErrorCode code, std::string_view msg) {
         return Result(Error{code, msg});
     }
 
