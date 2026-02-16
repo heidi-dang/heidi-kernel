@@ -22,11 +22,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
+          submodules: false
 
       - name: Validate .local is a gitlink (submodule)
         run: |
-          MODE=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $1}')
+          MODE=$(git ls-tree -r HEAD | grep '.local$' | awk '{print $1}')
           if [[ "$MODE" != "160000" ]]; then
             echo "FAIL: .local must be a gitlink (submodule), not a regular directory"
             echo "Found mode: $MODE"
@@ -40,8 +40,8 @@ jobs:
           # For PRs: check if .local pointer changed
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
-            OLD=$(git ls-tree -q --mode "$BASE" .local 2>/dev/null | awk '{print $3}')
-            NEW=$(git ls-tree -q --mode HEAD .local 2>/dev/null | awk '{print $3}')
+            OLD=$(git ls-tree -r "$BASE" | grep '.local$' | awk '{print $3}')
+            NEW=$(git ls-tree -r HEAD | grep '.local$' | awk '{print $3}')
             if [[ "$OLD" == "$NEW" ]]; then
               echo "NOTE: .local submodule pointer unchanged (OK if no governance changes)"
             else
@@ -53,11 +53,10 @@ jobs:
 
       - name: Check for emojis in commits
         run: |
-          EMOJI_PATTERN='.*(\ud83d\ude00|\ud83d\ude03|\ud83d\ude04|[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]).*'
           FOUND=0
-          for commit in $(git log --format=%H HEAD~${{ github.event.inputs.commits || '5' }}..HEAD 2>/dev/null || echo "HEAD"); do
+          for commit in $(git log --format=%H HEAD~5..HEAD 2>/dev/null || echo "HEAD"); do
             MSG=$(git log -1 --format=%B "$commit" 2>/dev/null || echo "")
-            if echo "$MSG" | grep -E "$EMOJI_PATTERN" >/dev/null 2>&1; then
+            if echo "$MSG" | grep -q $'[\xf0\x9f\x98\x80-\xf0\x9f\xbf\xbf]' 2>/dev/null; then
               echo "FAIL: Emoji found in commit $commit: $MSG"
               FOUND=1
             fi
