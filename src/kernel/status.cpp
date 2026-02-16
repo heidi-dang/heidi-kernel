@@ -16,16 +16,28 @@ namespace {
 constexpr std::string_view kVersion = "0.1.0";
 
 uint64_t get_rss_kb() {
-    FILE* f = fopen("/proc/self/statm", "r");
-    if (!f) {
-        return 0;
+    struct FileHandle {
+        FILE* f = nullptr;
+        FileHandle() { f = fopen("/proc/self/statm", "r"); }
+        ~FileHandle() { if (f) fclose(f); }
+    };
+    thread_local FileHandle handle;
+
+    if (!handle.f) {
+        // Try to open if constructor failed or if it was closed somehow
+        handle.f = fopen("/proc/self/statm", "r");
+        if (!handle.f) {
+            return 0;
+        }
+    } else {
+        rewind(handle.f);
     }
+
     long rss = 0;
-    if (fscanf(f, "%*ld %ld", &rss) != 1) {
-        fclose(f);
+    long dummy = 0;
+    if (fscanf(handle.f, "%ld %ld", &dummy, &rss) != 2) {
         return 0;
     }
-    fclose(f);
     return static_cast<uint64_t>(rss * 4096 / 1024);
 }
 
