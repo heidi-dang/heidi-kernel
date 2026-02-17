@@ -26,6 +26,7 @@ TEST(LoggerTest, ThreadSafety) {
   }
 
   // Basic verification: count newlines
+  // Ensure all logs are captured
   std::string output = ss.str();
   int newlines = 0;
   for (char c : output) {
