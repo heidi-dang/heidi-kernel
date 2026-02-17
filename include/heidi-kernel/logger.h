@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <mutex>
 #include <ostream>
 #include <string_view>
 
@@ -34,6 +35,7 @@ private:
 
     std::ostream& out_;
     LogLevel min_level_;
+    std::mutex mutex_;
 };
 
 }
