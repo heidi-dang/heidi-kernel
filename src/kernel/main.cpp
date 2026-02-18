@@ -1,3 +1,4 @@
+#include "heidi-kernel/config.h"
 #include "heidi-kernel/event_loop.h"
 #include "heidi-kernel/logger.h"
 #include "heidi-kernel/status.h"
@@ -11,6 +12,7 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 =======
@@ -18,14 +20,23 @@
 #include "heidi-kernel/event_loop.h"
 #include "heidi-kernel/logger.h"
 #include "heidi-kernel/status.h"
+    =======
+>>>>>>> 88f1ce3 (chore(kernel): IPC contract polish + runtime socket path)
 
-    >>>>>>> 3bdbab5 (chore(kernel): IPC contract polish + runtime socket path) namespace {
+    >>>>>>> 3bdbab5(chore(kernel)
+                    : IPC contract polish + runtime socket path) namespace {
 
   std::sig_atomic_t g_signal_received = 0;
 
+<<<<<<< HEAD
   void signal_handler(int signal) {
     g_signal_received = signal;
   }
+=======
+  void signal_handler(int signal) {
+    g_signal_received = signal;
+  }
+>>>>>>> 88f1ce3 (chore(kernel): IPC contract polish + runtime socket path)
 
 } // namespace
 

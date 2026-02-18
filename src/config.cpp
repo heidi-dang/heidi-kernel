@@ -37,10 +37,8 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
                                    std::string_view{"Unknown argument"});
     }
   }
-}
-}
 
-return Result<Config>::ok(config);
+  return Result<Config>::ok(config);
 }
 
 std::string_view ConfigParser::version() {

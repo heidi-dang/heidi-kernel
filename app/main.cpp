@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+
 namespace {
 
 std::sig_atomic_t g_signal_received = 0;
