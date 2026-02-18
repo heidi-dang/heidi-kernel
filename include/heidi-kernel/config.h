@@ -10,6 +10,7 @@ namespace heidi {
 struct Config {
   std::string_view config_path;
   std::string_view log_level;
+  std::string_view socket_path;
   bool show_version = false;
   bool show_help = false;
 };

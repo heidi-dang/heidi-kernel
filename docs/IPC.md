@@ -1,77 +1,88 @@
-# IPC Protocol
+# IPC Protocol v1
 
-The heidi-kernel daemon uses Unix domain sockets for IPC. Messages are line-delimited text.
+The `heidi-kernel` daemon uses Unix domain sockets for IPC. This document describes the Protocol v1 contract.
+
+## Protocol Specification
+
+- **Transport**: Unix Domain Socket (SOCK_STREAM)
+- **Framing**: Line-delimited (commands and responses end with `\n`)
+- **Default Path**: `/run/heidi-kernel/heidi-kernel.sock` (falls back to `$XDG_RUNTIME_DIR/heidi-kernel.sock` if set)
+- **Override**:
+  - Environment variable: `HEIDI_KERNEL_SOCK`
+  - Command line: `--socket-path <path>`
+
+## Commands and Responses
+
+### `ping`
+Checks if the daemon is alive.
+- **Request**: `ping`
+- **Response**: `PONG`
+
+### `status` / `status/json`
+Returns a JSON snapshot of the daemon's current state.
+- **Request**: `status` or `status/json`
+- **Response**: A single line of JSON containing:
+  - `protocol_version`: Integer (currently 1)
+  - `version`: Daemon version string
+  - `pid`: Process ID
+  - `uptime_ms`: Uptime in milliseconds
+  - `rss_kb`: Resident Set Size in KB
+  - `threads`: Number of threads
+  - `queue_depth`: Current job queue depth
+
+### `version`
+Returns the protocol and daemon version.
+- **Request**: `version`
+- **Response**: `PROTOCOL 1 DAEMON <version>`
+
+### `governor/policy`
+Returns the current resource governor policy.
+- **Request**: `governor/policy`
+- **Response**: Multiline key-value pairs.
+
+### `governor/diagnostics`
+Returns governor tick diagnostics.
+- **Request**: `governor/diagnostics`
+- **Response**: Multiline key-value pairs.
+
+### `metrics latest`
+Returns the latest system metrics sample.
+- **Request**: `metrics latest`
+- **Response**: JSON snapshot of metrics.
+
+### `metrics tail <n>`
+Returns the last `<n>` metrics samples.
+- **Request**: `metrics tail <n>`
+- **Response**: CSV or JSON list of metrics.
+
+## Error Format
+
+If a command fails or is unrecognized, the daemon returns a single-line error message:
+
+```
+ERR <code> <message>
+```
+
+Common error codes:
+- `UNKNOWN_COMMAND`: The command was not recognized.
+- `INVALID_ARGUMENT`: Command arguments are invalid.
+- `INTERNAL_ERROR`: An internal error occurred while processing the command.
 
 ## Unix Socket API (Direct)
 
-The kernel daemon listens on `/tmp/heidi-kernel.sock` (default).
+The kernel daemon listens on `/run/heidi-kernel/heidi-kernel.sock` (default), or `$XDG_RUNTIME_DIR/heidi-kernel.sock` if set.
 
 ### Request Types
 
 #### `ping`
-Returns `pong\n`.
+Returns `PONG\n`.
 
-#### `status`
-Returns multiline status including version and resource usage.
+#### `status` / `status/json` / `STATUS`
+Returns a JSON snapshot with protocol version, daemon version, pid, uptime, rss, threads, queue depth, etc.
 
-Response example:
-```text
-status
-version: 0.1.0
-cpu: 4.5%
-mem_total: 8150108
-mem_free: 7100324
-running_jobs: 0
-queued_jobs: 0
-rejected_jobs: 0
-blocked_reason: none
-retry_after_ms: 0
-cpu_pct: 4.5
-mem_pct: 12.8
-```
-
-#### `governor/policy`
-Returns the current resource governor policy.
-
-Response example:
-```text
-governor/policy
-max_running_jobs: 10
-max_queue_depth: 100
-cpu_high_watermark_pct: 85.0
-mem_high_watermark_pct: 90.0
-cooldown_ms: 1000
-min_start_gap_ms: 100
-```
-
-#### `governor/policy_update <json>`
-Updates the governor policy. Body must be a JSON object (partial updates allowed).
-
-Example: `governor/policy_update {"max_running_jobs": 20}`
-
-#### `governor/diagnostics`
-Returns detailed diagnostics from the last governor tick.
-
-Response example:
-```text
-governor/diagnostics
-last_decision: START_NOW
-last_block_reason: NONE
-last_retry_after_ms: 0
-last_tick_now_ms: 1708267594000
-last_tick_running: 5
-last_tick_queued: 2
-jobs_started_this_tick: 3
-jobs_scanned_this_tick: 10
-```
-
-#### `STATUS` (heidi-kernel binary only)
-The minimal `heidi-kernel` binary responds to `STATUS\n` with a JSON snapshot.
-
-Response:
-```json
-{"version":"0.1.0","pid":1234,"uptime_ms":1000,"rss_kb":4096,"threads":3,"queue_depth":0}
-```
+#### `governor/policy`, `governor/policy_update <json>`, `governor/diagnostics`, `metrics latest`, `metrics tail <n>`
+See main protocol above. All operate over the Unix domain socket only in this configuration.
 
 ## Response Format
-Most commands return multiline text with `key: value` pairs, unless otherwise specified.
+Most commands return JSON or plain text. HTTP/dashboard APIs are no longer present in daemon scope.
+

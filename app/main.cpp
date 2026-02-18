@@ -1,13 +1,15 @@
+#include "heidi-kernel/config.h"
 #include "heidi-kernel/event_loop.h"
 #include "heidi-kernel/logger.h"
 #include "heidi-kernel/status.h"
 
 #include <chrono>
 #include <csignal>
+#include <filesystem>
 #include <iostream>
+#include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
-
 namespace {
 
 std::sig_atomic_t g_signal_received = 0;
@@ -16,18 +18,50 @@ void signal_handler(int signal) {
   g_signal_received = signal;
 }
 
-std::string get_socket_path() {
-  const char* xdg_runtime = getenv("XDG_RUNTIME_DIR");
-  if (xdg_runtime && xdg_runtime[0]) {
-    return std::string(xdg_runtime) + "/heidi-kernel.sock";
-  }
-  return "/tmp/heidi-kernel.sock";
-}
-
 } // namespace
 
 int main(int argc, char* argv[]) {
-  std::string socket_path = get_socket_path();
+  heidi::Config config;
+  auto config_res = heidi::ConfigParser::parse(argc, argv);
+  if (config_res.ok()) {
+    config = config_res.value();
+  }
+
+  if (config.show_help) {
+    std::printf("Usage: heidi-kernel [options]\n");
+    std::printf("Options:\n");
+    std::printf("  -h, --help            Show this help message\n");
+    std::printf("  -v, --version         Show version information\n");
+    std::printf("  --log-level <level>   Set log level (debug, info, warn, error)\n");
+    std::printf("  --socket-path <path>  Set Unix domain socket path\n");
+    return 0;
+  }
+
+  if (config.show_version) {
+    std::printf("heidi-kernel version %s\n", std::string(heidi::ConfigParser::version()).c_str());
+    return 0;
+  }
+
+  std::string socket_path;
+  if (!config.socket_path.empty()) {
+    socket_path = std::string(config.socket_path);
+  } else if (const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR")) {
+    socket_path = std::string(xdg_runtime) + "/heidi-kernel.sock";
+  } else {
+    socket_path = "/run/heidi-kernel/heidi-kernel.sock";
+  }
+
+  // Ensure directory exists with safe permissions
+  std::filesystem::path p(socket_path);
+  std::filesystem::path dir = p.parent_path();
+  if (!dir.empty() && !std::filesystem::exists(dir)) {
+    try {
+      std::filesystem::create_directories(dir);
+      chmod(dir.c_str(), 0755);
+    } catch (const std::exception& e) {
+      std::fprintf(stderr, "Failed to create socket directory: %s\n", e.what());
+    }
+  }
 
   heidi::Logger logger;
   logger.info("heidi-kernel starting");
