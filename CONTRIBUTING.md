@@ -5,7 +5,7 @@ heidi-kernel is a native C++23 runtime daemon for WSL2-first environments. It ex
 ## Project structure
 
 - **Public repo** (`heidi-kernel`): contains source code, CI, scripts, public docs.
-- **Public companion repo** (`.local` submodule): contains governance rules, tasks, worklogs, dashboard - now public at https://github.com/heidi-dang/heidi-kernel-local
+- **Public companion repo** (`.local` submodule): contains governance rules, tasks, and worklogs - now public at https://github.com/heidi-dang/heidi-kernel-local
 
 ## Mandatory onboarding
 
