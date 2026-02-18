@@ -8,6 +8,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string>
+#include <future>
+#include <vector>
+#include <algorithm>
+#include <chrono>
 
 namespace {
 
@@ -61,17 +65,48 @@ void HttpServer::serve_forever() {
 
     listen(server_fd_, 10);
 
+    std::vector<std::future<void>> futures;
+    const size_t MAX_CONCURRENT_REQUESTS = 20;
+
     while (true) {
+        // Reap finished futures
+        std::erase_if(futures, [](auto& f) {
+            // Check if future is valid (it might have been moved)
+            if (!f.valid()) return true;
+            return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        });
+
         int client_fd = accept(server_fd_, nullptr, nullptr);
         if (client_fd < 0) {
             break;
         }
-        handle_client(client_fd);
-        close(client_fd);
+
+        if (futures.size() >= MAX_CONCURRENT_REQUESTS) {
+            const char* resp_503 = "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n";
+            write(client_fd, resp_503, sizeof("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n") - 1);
+            close(client_fd);
+            continue;
+        }
+
+        try {
+            futures.push_back(std::async(std::launch::async, [this, client_fd] {
+                try {
+                    handle_client(client_fd);
+                } catch (...) {} // Ensure we close the fd
+                close(client_fd);
+            }));
+        } catch (const std::system_error&) {
+            const char* resp_500 = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+            write(client_fd, resp_500, sizeof("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n") - 1);
+            close(client_fd);
+        }
     }
 }
 
 void HttpServer::handle_client(int client_fd) {
+    struct timeval tv = {5, 0}; // 5 second read timeout
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
     std::string request_buffer;
     char temp_buf[4096];
     ssize_t n;
@@ -83,7 +118,7 @@ void HttpServer::handle_client(int client_fd) {
     while (true) {
         if (request_buffer.size() >= MAX_REQUEST_SIZE) {
             const char* resp_413 = "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\n\r\n";
-            write(client_fd, resp_413, strlen(resp_413));
+            write(client_fd, resp_413, sizeof("HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\n\r\n") - 1);
             return;
         }
 
