@@ -75,12 +75,16 @@ void StatusSocket::bind() {
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, socket_path_.c_str(), sizeof(addr.sun_path) - 1);
+
   if (::bind(server_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
     ::close(server_fd_);
     server_fd_ = -1;
     return;
   }
   chmod(socket_path_.c_str(), 0666);
+
+  chmod(socket_path_.c_str(), 0666);
+
   if (listen(server_fd_, 5) < 0) {
     ::close(server_fd_);
     server_fd_ = -1;
@@ -104,11 +108,13 @@ void StatusSocket::serve_forever() {
   if (server_fd_ < 0) {
     return;
   }
+
   while (!stop_requested_) {
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(server_fd_, &fds);
     int max_fd = server_fd_;
+
     {
       std::lock_guard<std::mutex> lock(subscribers_mutex_);
       for (int fd : subscribers_) {
@@ -117,6 +123,7 @@ void StatusSocket::serve_forever() {
           max_fd = fd;
       }
     }
+
     struct timeval tv = {1, 0};
     int ready = select(max_fd + 1, &fds, nullptr, nullptr, &tv);
     if (ready < 0) {
@@ -127,12 +134,14 @@ void StatusSocket::serve_forever() {
     if (ready == 0) {
       continue;
     }
+
     if (FD_ISSET(server_fd_, &fds)) {
       int client_fd = accept(server_fd_, nullptr, nullptr);
       if (client_fd >= 0) {
         handle_client(client_fd);
       }
     }
+
     std::lock_guard<std::mutex> lock(subscribers_mutex_);
     for (auto it = subscribers_.begin(); it != subscribers_.end();) {
       if (FD_ISSET(*it, &fds)) {
@@ -204,6 +213,7 @@ std::string StatusSocket::format_status() const {
   auto uptime = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - status_.start_time)
                     .count();
+
   char buf[512];
   int len = snprintf(buf, sizeof(buf),
                      "{\"protocol_version\":%u,\"version\":\"%s\",\"pid\":%d,\"uptime_ms\":%lld,"

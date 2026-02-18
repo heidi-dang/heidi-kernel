@@ -45,7 +45,6 @@ private:
   int server_fd_ = -1;
   KernelStatus status_;
   std::atomic<bool> stop_requested_{false};
-
   RingBuffer<Event> ring_buffer_{100};
   std::vector<int> subscribers_;
   mutable std::mutex subscribers_mutex_;
