@@ -157,7 +157,6 @@ TEST_F(GovApplyParserTest, ParseV1BackwardCompat) {
   EXPECT_TRUE(result.success);
   // P1 API: payloads without explicit version are treated as V1; no version field present.
 }
-}
 
 } // namespace gov
 } // namespace heidi
