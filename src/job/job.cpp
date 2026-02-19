@@ -128,18 +128,23 @@ public:
 
       close(pipe_stderr[0]);
 
-      // Debug: record child pid/pgid/session for instrumentation
-      pid_t cpid = getpid();
-      pid_t cpgid_before = getpgid(0);
-      pid_t csid = getsid(0);
-      int set_err = 0;
-      int setres = setpgid(0, 0);
-      if (setres != 0)
-        set_err = errno;
-      fprintf(
-          stderr,
-          "SPAWN_DBG child pid=%d ppid=%d pgid_before=%d setpgid_res=%d setpgid_errno=%d sid=%d\n",
-          cpid, getppid(), (int)cpgid_before, setres, set_err, (int)csid);
+      // Optional debug instrumentation; only enabled when HK_DEBUG_PROC_CAP is set.
+      if (g_proc_cap_enabled) {
+        pid_t cpid = getpid();
+        pid_t cpgid_before = getpgid(0);
+        pid_t csid = getsid(0);
+        int set_err = 0;
+        int setres = setpgid(0, 0);
+        if (setres != 0)
+          set_err = errno;
+        fprintf(stderr,
+                "SPAWN_DBG child pid=%d ppid=%d pgid_before=%d setpgid_res=%d setpgid_errno=%d "
+                "sid=%d\n",
+                cpid, getppid(), (int)cpgid_before, setres, set_err, (int)csid);
+      } else {
+        // still attempt to setpgid for correct behavior, but don't log
+        setpgid(0, 0);
+      }
 
       dup2(pipe_stdout[1], STDOUT_FILENO);
 
@@ -159,15 +164,29 @@ public:
 
       close(pipe_stderr[1]);
 
-      // Parent: record what PGID we think the job leader has
+      // Parent: attempt to record the actual PGID of the leader (robustly).
+      // Some commands run via /bin/sh -c may re-parent or change PGID during exec;
+      // record the PGID observed from the leader pid rather than assuming pid==pgid.
       pid_t leader_pid = pid;
-      pid_t leader_pgid = getpgid(leader_pid);
       int pg_get_errno = 0;
-      if (leader_pgid == -1)
+      pid_t observed_pgid = -1;
+      // Try a few times with small sleeps to allow the child to set its PGID.
+      for (int attempt = 0; attempt < 10; ++attempt) {
+        observed_pgid = getpgid(leader_pid);
+        if (observed_pgid != -1)
+          break;
         pg_get_errno = errno;
-      fprintf(stderr, "SPAWN_DBG parent leader_pid=%d leader_pgid=%d pg_get_errno=%d\n", leader_pid,
-              (int)leader_pgid, pg_get_errno);
-      job.process_group = pid;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      if (observed_pgid == -1) {
+        // fallback: record the pid (old behavior) but log the failure once.
+        observed_pgid = pid;
+      }
+      if (g_proc_cap_enabled) {
+        fprintf(stderr, "SPAWN_DBG parent leader_pid=%d observed_pgid=%d pg_get_errno=%d\n",
+                leader_pid, (int)observed_pgid, pg_get_errno);
+      }
+      job.process_group = observed_pgid;
 
       *stdout_fd = pipe_stdout[0];
 
