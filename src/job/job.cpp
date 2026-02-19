@@ -458,7 +458,6 @@ bool JobRunner::enforce_job_process_cap(std::shared_ptr<Job> job, uint64_t now_m
     record_proc_cap(job, now_ms, 0, job->max_child_processes, 3, 1, 0);
     return false;
   }
-
   // Instrumentation: log what PGID we think we're inspecting and a cheap probe
   if (getenv("HK_DEBUG_PROC_CAP")) {
     pid_t stored_pgid = job->process_group;
