@@ -49,8 +49,24 @@ int ProcfsProcessInspector::count_processes_in_pgid(pid_t pgid) {
     // cnswap exit_signal processor rt_priority policy delayacct_blkio_ticks guest_time cguest_time
     // start_data end_data start_brk arg_start arg_end env_start env_end exit_code We need pgrp
     // (field 5, 1-indexed)
-    int ppid, pgrp;
-    if (fscanf(stat_file, "%*d %*s %*c %d %d", &ppid, &pgrp) == 2) {
+    // Read the full stat line to avoid broken parsing when comm contains spaces.
+    // We'll parse by finding the closing ')' then scanning following fields.
+    char buf[4096];
+    if (!fgets(buf, sizeof(buf), stat_file)) {
+      fclose(stat_file);
+      continue;
+    }
+    // Find the ')' that ends the comm field
+    char* p = strrchr(buf, ')');
+    if (!p) {
+      // malformed, skip
+      fclose(stat_file);
+      continue;
+    }
+    // Now parse fields after ')' - we expect: " state ppid pgrp ..."
+    int ppid = 0;
+    int pgrp = 0;
+    if (sscanf(p + 1, " %*c %d %d", &ppid, &pgrp) == 2) {
       if (static_cast<pid_t>(pgrp) == pgid) {
         count++;
       }

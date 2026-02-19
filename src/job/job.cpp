@@ -128,7 +128,18 @@ public:
 
       close(pipe_stderr[0]);
 
-      setpgid(0, 0);
+      // Debug: record child pid/pgid/session for instrumentation
+      pid_t cpid = getpid();
+      pid_t cpgid_before = getpgid(0);
+      pid_t csid = getsid(0);
+      int set_err = 0;
+      int setres = setpgid(0, 0);
+      if (setres != 0)
+        set_err = errno;
+      fprintf(
+          stderr,
+          "SPAWN_DBG child pid=%d ppid=%d pgid_before=%d setpgid_res=%d setpgid_errno=%d sid=%d\n",
+          cpid, getppid(), (int)cpgid_before, setres, set_err, (int)csid);
 
       dup2(pipe_stdout[1], STDOUT_FILENO);
 
@@ -148,6 +159,14 @@ public:
 
       close(pipe_stderr[1]);
 
+      // Parent: record what PGID we think the job leader has
+      pid_t leader_pid = pid;
+      pid_t leader_pgid = getpgid(leader_pid);
+      int pg_get_errno = 0;
+      if (leader_pgid == -1)
+        pg_get_errno = errno;
+      fprintf(stderr, "SPAWN_DBG parent leader_pid=%d leader_pgid=%d pg_get_errno=%d\n", leader_pid,
+              (int)leader_pgid, pg_get_errno);
       job.process_group = pid;
 
       *stdout_fd = pipe_stdout[0];
@@ -405,6 +424,29 @@ bool JobRunner::enforce_job_process_cap(std::shared_ptr<Job> job, uint64_t now_m
   if (!inspector_) {
     record_proc_cap(job, now_ms, 0, job->max_child_processes, 3, 1, 0);
     return false;
+  }
+
+  // Instrumentation: log what PGID we think we're inspecting and a cheap probe
+  if (getenv("HK_DEBUG_PROC_CAP")) {
+    pid_t stored_pgid = job->process_group;
+    int pg_get_errno = 0;
+    pid_t pg_res = -1;
+    if (stored_pgid > 0) {
+      pg_res = getpgid(stored_pgid);
+      if (pg_res == -1)
+        pg_get_errno = errno;
+    }
+    int kill_res = -1, kill_errno = 0;
+    if (stored_pgid > 0) {
+      kill_res = kill(-stored_pgid, 0);
+      if (kill_res == -1)
+        kill_errno = errno;
+    }
+    fprintf(stderr,
+            "PROC_CAP_GOV_DBG job=%s stored_pgid=%d getpgid=%d getpgid_errno=%d kill_exist_res=%d "
+            "kill_errno=%d limit=%d\n",
+            job->id.c_str(), (int)stored_pgid, (int)pg_res, pg_get_errno, kill_res, kill_errno,
+            job->max_child_processes);
   }
 
   int count = inspector_->count_processes_in_pgid(job->process_group);
