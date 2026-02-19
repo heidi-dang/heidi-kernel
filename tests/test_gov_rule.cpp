@@ -152,5 +152,11 @@ TEST_F(GovApplyParserTest, AckCodeToString) {
   EXPECT_EQ(ack_to_string(AckCode::NACK_PROCESS_DEAD), "NACK_PROCESS_DEAD");
 }
 
+TEST_F(GovApplyParserTest, ParseV1BackwardCompat) {
+  auto result = parse_gov_apply(R"({"pid":1234,"cpu":{"affinity":"0-3"}})");
+  EXPECT_TRUE(result.success);
+  // P1 API: payloads without explicit version are treated as V1; no version field present.
+}
+
 } // namespace gov
 } // namespace heidi
