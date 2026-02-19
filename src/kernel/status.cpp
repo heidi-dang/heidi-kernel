@@ -51,6 +51,7 @@ int get_thread_count() {
 namespace heidi {
 
 StatusSocket::StatusSocket(std::string_view socket_path) : socket_path_(socket_path) {
+  status_.protocol_version = 1;
   status_.version = kVersion;
   status_.pid = getpid();
   status_.start_time = std::chrono::steady_clock::now();
@@ -140,8 +141,26 @@ void StatusSocket::handle_client(int client_fd) {
   }
   buf[n] = '\0';
 
-  if (strncmp(buf, "STATUS\n", 8) == 0) {
-    std::string response = format_status();
+  std::string_view request(buf);
+  while (!request.empty() && (request.back() == '\n' || request.back() == '\r')) {
+    request.remove_suffix(1);
+  }
+
+  std::string response;
+  if (request == "ping") {
+    response = "PONG\n";
+  } else if (request == "version") {
+    char vbuf[128];
+    snprintf(vbuf, sizeof(vbuf), "PROTOCOL %u DAEMON %s\n", status_.protocol_version,
+             std::string(status_.version).c_str());
+    response = vbuf;
+  } else if (request == "status" || request == "status/json" || request == "STATUS") {
+    response = format_status();
+  } else if (!request.empty()) {
+    response = "ERR UNKNOWN_COMMAND " + std::string(request) + "\n";
+  }
+
+  if (!response.empty()) {
     write(client_fd, response.c_str(), response.size());
   }
 }
@@ -153,9 +172,9 @@ std::string StatusSocket::format_status() const {
 
   char buf[512];
   int len = snprintf(buf, sizeof(buf),
-                     "{\"version\":\"%s\",\"pid\":%d,\"uptime_ms\":%lld,\"rss_kb\":%llu,"
-                     "\"threads\":%d,\"queue_depth\":%d}\n",
-                     std::string(status_.version).c_str(), status_.pid,
+                     "{\"protocol_version\":%u,\"version\":\"%s\",\"pid\":%d,\"uptime_ms\":%lld,"
+                     "\"rss_kb\":%llu,\"threads\":%d,\"queue_depth\":%d}\n",
+                     status_.protocol_version, std::string(status_.version).c_str(), status_.pid,
                      static_cast<long long>(uptime), static_cast<unsigned long long>(get_rss_kb()),
                      get_thread_count(), status_.queue_depth);
   return std::string(buf, len);

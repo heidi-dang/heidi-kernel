@@ -1,5 +1,6 @@
 #include "heidi-kernel/config.h"
 
+#include <cstdlib>
 #include <string_view>
 
 namespace heidi {
@@ -14,6 +15,10 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
   Config config;
   config.log_level = "info";
 
+  if (const char* env_sock = std::getenv("HEIDI_KERNEL_SOCK")) {
+    config.socket_path = env_sock;
+  }
+
   for (int i = 1; i < argc; ++i) {
     std::string_view arg = argv[i];
 
@@ -25,6 +30,8 @@ Result<Config> ConfigParser::parse(int argc, char* argv[]) {
       config.log_level = argv[++i];
     } else if (arg == "--config" && i + 1 < argc) {
       config.config_path = argv[++i];
+    } else if (arg == "--socket-path" && i + 1 < argc) {
+      config.socket_path = argv[++i];
     } else if (!arg.starts_with("-")) {
       return Result<Config>::error(ErrorCode::InvalidArgument,
                                    std::string_view{"Unknown argument"});

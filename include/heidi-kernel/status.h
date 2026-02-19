@@ -9,6 +9,7 @@
 namespace heidi {
 
 struct KernelStatus {
+  uint32_t protocol_version;
   std::string_view version;
   int pid;
   std::chrono::steady_clock::time_point start_time;
