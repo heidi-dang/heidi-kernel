@@ -1,10 +1,14 @@
 #include "heidi-kernel/status.h"
 
+#include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <iomanip>
+#include <sstream>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -12,7 +16,6 @@
 #include <unistd.h>
 
 namespace {
-
 constexpr std::string_view kVersion = "0.1.0";
 
 uint64_t get_rss_kb() {
@@ -45,7 +48,6 @@ int get_thread_count() {
   fclose(f);
   return threads;
 }
-
 } // namespace
 
 namespace heidi {
@@ -64,7 +66,6 @@ StatusSocket::~StatusSocket() {
 
 void StatusSocket::bind() {
   unlink(socket_path_.c_str());
-
   server_fd_ = socket(AF_UNIX, SOCK_STREAM, 0);
   if (server_fd_ < 0) {
     return;
@@ -80,6 +81,7 @@ void StatusSocket::bind() {
     server_fd_ = -1;
     return;
   }
+  chmod(socket_path_.c_str(), 0666);
 
   chmod(socket_path_.c_str(), 0666);
 
@@ -111,32 +113,66 @@ void StatusSocket::serve_forever() {
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(server_fd_, &fds);
+    int max_fd = server_fd_;
+
+    {
+      std::lock_guard<std::mutex> lock(subscribers_mutex_);
+      for (int fd : subscribers_) {
+        FD_SET(fd, &fds);
+        if (fd > max_fd)
+          max_fd = fd;
+      }
+    }
 
     struct timeval tv = {1, 0};
-    int ready = select(server_fd_ + 1, &fds, nullptr, nullptr, &tv);
+    int ready = select(max_fd + 1, &fds, nullptr, nullptr, &tv);
     if (ready < 0) {
+      if (errno == EINTR)
+        continue;
       break;
     }
     if (ready == 0) {
       continue;
     }
 
-    int client_fd = accept(server_fd_, nullptr, nullptr);
-    if (client_fd < 0) {
-      if (errno != EINTR) {
-        break;
+    if (FD_ISSET(server_fd_, &fds)) {
+      int client_fd = accept(server_fd_, nullptr, nullptr);
+      if (client_fd >= 0) {
+        handle_client(client_fd);
       }
-      continue;
     }
-    handle_client(client_fd);
-    ::close(client_fd);
+
+    std::lock_guard<std::mutex> lock(subscribers_mutex_);
+    for (auto it = subscribers_.begin(); it != subscribers_.end();) {
+      if (FD_ISSET(*it, &fds)) {
+        char dummy[128];
+        ssize_t n = recv(*it, dummy, sizeof(dummy), MSG_DONTWAIT);
+        if (n <= 0) {
+          ::close(*it);
+          it = subscribers_.erase(it);
+          continue;
+        }
+      }
+      ++it;
+    }
   }
 }
 
 void StatusSocket::handle_client(int client_fd) {
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(client_fd, &fds);
+  struct timeval tv = {0, 500000}; // 0.5s timeout
+  int ready = select(client_fd + 1, &fds, nullptr, nullptr, &tv);
+  if (ready <= 0) {
+    ::close(client_fd);
+    return;
+  }
+
   char buf[128];
   ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
   if (n <= 0) {
+    ::close(client_fd);
     return;
   }
   buf[n] = '\0';
@@ -156,6 +192,14 @@ void StatusSocket::handle_client(int client_fd) {
     response = vbuf;
   } else if (request == "status" || request == "status/json" || request == "STATUS") {
     response = format_status();
+  } else if (request == "SUBSCRIBE") {
+    std::lock_guard<std::mutex> lock(subscribers_mutex_);
+    subscribers_.push_back(client_fd);
+    auto events = ring_buffer_.last_n(100);
+    for (const auto& event : events) {
+      std::string msg = event.to_json() + "\n";
+      send(client_fd, msg.c_str(), msg.size(), MSG_NOSIGNAL);
+    }
   } else if (!request.empty()) {
     response = "ERR UNKNOWN_COMMAND " + std::string(request) + "\n";
   }
@@ -178,6 +222,20 @@ std::string StatusSocket::format_status() const {
                      static_cast<long long>(uptime), static_cast<unsigned long long>(get_rss_kb()),
                      get_thread_count(), status_.queue_depth);
   return std::string(buf, len);
+}
+
+void StatusSocket::publish_event(const Event& event) {
+  ring_buffer_.push(event);
+  std::string msg = event.to_json() + "\n";
+  std::lock_guard<std::mutex> lock(subscribers_mutex_);
+  for (auto it = subscribers_.begin(); it != subscribers_.end();) {
+    if (send(*it, msg.c_str(), msg.size(), MSG_NOSIGNAL) < 0) {
+      ::close(*it);
+      it = subscribers_.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 } // namespace heidi
