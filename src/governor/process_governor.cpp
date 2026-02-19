@@ -205,6 +205,10 @@ ProcessGovernor::Stats ProcessGovernor::get_stats() const {
   Stats s = stats_;
   s.rules_count = rules_.size();
   s.tracked_pids = rules_.size();
+  auto store_stats = group_store_.get_stats();
+  s.group_evictions = store_stats.group_evictions;
+  s.pidmap_evictions = store_stats.pidmap_evictions;
+  s.cgroup_unavailable_events = store_stats.cgroup_unavailable_count;
   return s;
 }
 
@@ -394,8 +398,119 @@ void ProcessGovernor::epoll_loop() {
   }
 }
 
+ApplyResult ProcessGovernor::apply_group_policy(int32_t pid, const GovApplyMsg& msg) {
+  ApplyResult result;
+
+  if (msg.group) {
+    bool inserted = group_store_.upsert_group(msg.group->c_str(), msg);
+    if (!inserted) {
+      result.err = ENOMEM;
+      result.error_detail = "failed to upsert group policy";
+      return result;
+    }
+
+    auto prev_stats = group_store_.get_stats();
+    group_store_.map_pid_to_group(pid, msg.group->c_str());
+    auto new_stats = group_store_.get_stats();
+
+    if (new_stats.group_evictions > prev_stats.group_evictions) {
+      stats_.group_evictions++;
+      if (event_callback_) {
+        GovApplyMsg evict_msg;
+        evict_msg.pid = pid;
+        event_callback_(4, evict_msg, 0);
+      }
+    }
+    if (new_stats.pidmap_evictions > prev_stats.pidmap_evictions) {
+      stats_.pidmap_evictions++;
+      if (event_callback_) {
+        GovApplyMsg evict_msg;
+        evict_msg.pid = pid;
+        event_callback_(5, evict_msg, 0);
+      }
+    }
+
+    const char* group_id = group_store_.get_group_for_pid(pid);
+    if (group_id) {
+      const GroupPolicy* group_policy = group_store_.get_group(group_id);
+      if (group_policy) {
+        auto r = apply_cgroup_policy(pid, *group_policy);
+        if (!r.success) {
+          return r;
+        }
+      }
+    }
+  }
+
+  result.success = true;
+  return result;
+}
+
+ApplyResult ProcessGovernor::apply_cgroup_policy(int32_t pid, const GroupPolicy& group_policy) {
+  ApplyResult result;
+
+  if (!cgroup_driver_.is_available() || !cgroup_driver_.is_enabled()) {
+    uint64_t now = get_current_time_ns();
+    if (now - last_cgroup_unavailable_ns_ > kCgroupUnavailableRateLimitNs) {
+      last_cgroup_unavailable_ns_ = now;
+      stats_.cgroup_unavailable_events++;
+      if (event_callback_) {
+        GovApplyMsg msg;
+        msg.pid = pid;
+        event_callback_(6, msg, 0);
+      }
+    }
+    result.success = true;
+    return result;
+  }
+
+  CgroupDriver::ApplyResult cr;
+
+  CpuPolicy cpu;
+  if (group_policy.cpu_max_pct) {
+    cpu.max_pct = group_policy.cpu_max_pct;
+  }
+  if (group_policy.cpu_quota_us) {
+    cpu.quota_us = group_policy.cpu_quota_us;
+  }
+  if (group_policy.cpu_period_us) {
+    cpu.period_us = group_policy.cpu_period_us;
+  }
+
+  MemPolicy mem;
+  if (group_policy.mem_max_bytes) {
+    mem.max_bytes = group_policy.mem_max_bytes;
+  }
+  if (group_policy.mem_high_bytes) {
+    mem.high_bytes = group_policy.mem_high_bytes;
+  }
+
+  PidsPolicy pids;
+  if (group_policy.pids_max) {
+    pids.max = group_policy.pids_max;
+  }
+
+  cr = cgroup_driver_.apply(pid, cpu, mem, pids);
+
+  if (!cr.success) {
+    result.err = cr.err;
+    result.error_detail = cr.error_detail;
+    return result;
+  }
+
+  result.success = true;
+  return result;
+}
+
 ApplyResult ProcessGovernor::apply_rules(int32_t pid, const GovApplyMsg& msg) {
   ApplyResult result;
+
+  if (msg.group) {
+    auto r = apply_group_policy(pid, msg);
+    if (!r.success) {
+      return r;
+    }
+  }
 
   if (msg.cpu) {
     if (msg.cpu->affinity) {
