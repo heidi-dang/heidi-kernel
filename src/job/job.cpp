@@ -2,12 +2,15 @@
 
 #include "heidi-kernel/metrics.h"
 #include "heidi-kernel/resource_governor.h"
+#include "procfs_starttime.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
@@ -187,6 +190,17 @@ public:
                 leader_pid, (int)observed_pgid, pg_get_errno);
       }
       job.process_group = observed_pgid;
+
+      // Capture leader start_time to guard against PID reuse affecting later
+      // process-group attribution. Use helper to parse /proc/<pid>/stat.
+      auto start_time = read_proc_start_time_ticks(leader_pid);
+      if (start_time) {
+        job.leader_start_time = *start_time;
+        if (g_proc_cap_enabled) {
+          fprintf(stderr, "SPAWN_DBG parent leader_pid=%d leader_start_time=%llu\n", leader_pid,
+                  (unsigned long long)*start_time);
+        }
+      }
 
       *stdout_fd = pipe_stdout[0];
 
@@ -466,6 +480,26 @@ bool JobRunner::enforce_job_process_cap(std::shared_ptr<Job> job, uint64_t now_m
             "kill_errno=%d limit=%d\n",
             job->id.c_str(), (int)stored_pgid, (int)pg_res, pg_get_errno, kill_res, kill_errno,
             job->max_child_processes);
+  }
+
+  // If we captured leader_start_time at spawn, validate that the current
+  // process group leader still matches that start_time to protect against PID
+  // reuse. If mismatch, skip enforcement for this job (treat as unknown).
+  if (job->leader_start_time != 0 && job->process_group > 0) {
+    auto st = read_proc_start_time_ticks(job->process_group);
+    if (st && *st != job->leader_start_time) {
+      // PID was likely reused; skip enforcement to avoid killing wrong
+      // processes. Record the skip and return.
+      if (g_proc_cap_enabled) {
+        fprintf(stderr,
+                "PROC_CAP_GOV_DBG leader_start_time_mismatch job=%s pgid=%d "
+                "expected=%llu observed=%llu\n",
+                job->id.c_str(), (int)job->process_group,
+                (unsigned long long)job->leader_start_time, (unsigned long long)*st);
+      }
+      record_proc_cap(job, now_ms, 0, job->max_child_processes, 3, 2, 0);
+      return false;
+    }
   }
 
   int count = inspector_->count_processes_in_pgid(job->process_group);

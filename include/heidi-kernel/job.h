@@ -50,6 +50,10 @@ struct Job {
   uint64_t started_at_ms = 0;
   uint64_t ended_at_ms = 0;
   pid_t process_group = -1;
+  // start_time (boot-time ticks) of the leader process at spawn time. Used to
+  // validate that a later-observed process group leader is the same process
+  // (detect PID reuse). 0 means unknown/not-captured.
+  uint64_t leader_start_time = 0;
   uint64_t max_runtime_ms = 600000;       // 10 minutes default
   uint64_t max_log_bytes = 10485760;      // 10MB default
   uint64_t max_output_line_bytes = 65536; // 64KB default
