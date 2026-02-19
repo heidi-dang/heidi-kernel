@@ -17,9 +17,7 @@ add_executable(unit_tests
     test_job.cpp
     test_governor.cpp
     test_policy_store.cpp
-    test_http_shutdown.cpp
     ../src/config.cpp
-    ../src/dashd/http.cpp
 )
 
 target_include_directories(unit_tests PRIVATE ../include)

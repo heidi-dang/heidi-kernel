@@ -8,16 +8,16 @@ namespace heidi {
 
 class PolicyStore {
 public:
-  explicit PolicyStore(std::string path);
+    explicit PolicyStore(std::string path);
 
-  // Load policy from file, with validation and fallback to defaults on error
-  GovernorPolicy load();
+    // Load policy from file, with validation and fallback to defaults on error
+    GovernorPolicy load();
 
-  // Save policy atomically
-  void save(const GovernorPolicy& policy);
+    // Save policy atomically
+    void save(const GovernorPolicy& policy);
 
 private:
-  std::string path_;
+    std::string path_;
 };
 
 } // namespace heidi
