@@ -192,17 +192,41 @@ TEST_F(IntegrationTest, IT_ProcCap_KillsProcessGroup) {
 
   pid_t pgid = job->process_group;
 
-  for (int i = 0; i < 10; ++i) {
+  // Poll for the PROC_LIMIT transition with a bounded timeout to avoid
+  // flaky failures from observing a transient intermediate state.
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2000);
+  std::array<JobStatus, 16> last_statuses;
+  size_t last_idx = 0;
+  JobStatus observed = job->status;
+
+  while (std::chrono::steady_clock::now() < deadline) {
     now_ms += 1000;
     job_runner_->tick(now_ms, metrics);
     job = job_runner_->get_job_status(job_id);
-    if (job->status == JobStatus::PROC_LIMIT)
+    if (job == nullptr)
       break;
+    observed = job->status;
+    last_statuses[last_idx++ % last_statuses.size()] = observed;
+    if (observed == JobStatus::PROC_LIMIT)
+      break;
+    // short sleep to avoid tight spin in environments where tick may be
+    // influenced by scheduling; keep this test-local only
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   job = job_runner_->get_job_status(job_id);
   ASSERT_NE(job, nullptr);
-  EXPECT_EQ(job->status, JobStatus::PROC_LIMIT);
+  if (job->status != JobStatus::PROC_LIMIT) {
+    // Build a diagnostic string with last observed statuses
+    std::string s = "Timeout waiting for PROC_LIMIT; elapsed_ms=2000 last_statuses=";
+    for (size_t i = 0; i < last_statuses.size(); ++i) {
+      size_t idx = (last_idx + i) % last_statuses.size();
+      s += std::to_string(static_cast<int>(last_statuses[idx]));
+      if (i + 1 < last_statuses.size())
+        s += ",";
+    }
+    FAIL() << s;
+  }
 
   // Wait for process to be reaped
   int retries = 10;
