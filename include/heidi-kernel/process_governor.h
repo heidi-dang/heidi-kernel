@@ -1,6 +1,8 @@
 #pragma once
 
+#include "heidi-kernel/cgroup_driver.h"
 #include "heidi-kernel/gov_rule.h"
+#include "heidi-kernel/group_policy_store.h"
 
 #include <atomic>
 #include <cstdint>
@@ -55,6 +57,9 @@ public:
     size_t tracked_pids = 0;
     uint64_t pid_exit_events = 0;
     uint64_t evicted_events = 0;
+    uint64_t group_evictions = 0;
+    uint64_t pidmap_evictions = 0;
+    uint64_t cgroup_unavailable_events = 0;
   };
   Stats get_stats() const;
 
@@ -68,6 +73,8 @@ private:
   void epoll_loop();
 
   ApplyResult apply_rules(int32_t pid, const GovApplyMsg& msg);
+  ApplyResult apply_group_policy(int32_t pid, const GovApplyMsg& msg);
+  ApplyResult apply_cgroup_policy(int32_t pid, const GroupPolicy& group_policy);
 
   ApplyResult apply_affinity(int32_t pid, const std::string& affinity);
   ApplyResult apply_nice(int32_t pid, int8_t nice);
@@ -97,6 +104,11 @@ private:
   mutable std::mutex rules_mutex_;
 
   std::function<void(uint8_t event_type, const GovApplyMsg& msg, int err)> event_callback_;
+
+  GroupPolicyStore group_store_;
+  CgroupDriver cgroup_driver_;
+  uint64_t last_cgroup_unavailable_ns_ = 0;
+  static constexpr uint64_t kCgroupUnavailableRateLimitNs = 1000000000ULL;
 
   Stats stats_;
 };
