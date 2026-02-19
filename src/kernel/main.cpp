@@ -72,8 +72,9 @@ int main(int argc, char* argv[]) {
 
   heidi::StatusSocket status_socket(socket_path);
   status_socket.bind();
-
   logger.info("status socket bound");
+
+  std::thread status_thread([&status_socket]() { status_socket.serve_forever(); });
 
   heidi::EventLoop loop{std::chrono::milliseconds{100}};
   int tick_count = 0;
@@ -92,11 +93,9 @@ int main(int argc, char* argv[]) {
     std::this_thread::sleep_for(std::chrono::milliseconds{100});
   }
 
-  logger.info("shutdown requested");
-  loop.request_stop();
-
-  while (loop.is_running()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds{10});
+  status_socket.set_stop();
+  if (status_thread.joinable()) {
+    status_thread.join();
   }
 
   logger.info("heidi-kernel stopped");

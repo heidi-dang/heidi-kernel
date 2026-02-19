@@ -1,10 +1,15 @@
 #pragma once
 
+#include "heidi-kernel/event.h"
+#include "heidi-kernel/ring_buffer.h"
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace heidi {
 
@@ -26,12 +31,11 @@ public:
   void bind();
   void close();
   void set_stop();
-
   void serve_forever();
-
   KernelStatus& status() {
     return status_;
   }
+  void publish_event(const Event& event);
 
 private:
   void handle_client(int client_fd);
@@ -41,6 +45,10 @@ private:
   int server_fd_ = -1;
   KernelStatus status_;
   std::atomic<bool> stop_requested_{false};
+
+  RingBuffer<Event> ring_buffer_{100};
+  std::vector<int> subscribers_;
+  mutable std::mutex subscribers_mutex_;
 };
 
 } // namespace heidi
