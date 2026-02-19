@@ -24,6 +24,57 @@
 
 namespace heidi {
 
+namespace {
+// Lightweight ring buffer recorder for proc-cap debug. Enabled only when
+// HK_DEBUG_PROC_CAP env var is set. Zero-allocation, lock-free (atomic idx).
+struct ProcCapEntry {
+  char job_id[32];
+  uint64_t tick_ms;
+  int proc_count;
+  int proc_limit;
+  uint8_t decision;    // 0=no_action,1=would_kill,2=killed,3=skipped
+  uint8_t skip_reason; // 0=none,1=no_inspector,2=inspector_error,3=limit_zero,4=policy_disabled
+  int kill_errno;      // errno from kill() or 0
+  int final_status;    // job->status numeric
+};
+
+static ProcCapEntry g_proc_cap_buf[256];
+static std::atomic<uint32_t> g_proc_cap_idx{0};
+static bool g_proc_cap_enabled = !!getenv("HK_DEBUG_PROC_CAP");
+static bool g_proc_cap_dump = !!getenv("HK_DEBUG_PROC_CAP_DUMP");
+
+inline void record_proc_cap(const std::shared_ptr<Job>& job, uint64_t tick_ms, int count, int limit,
+                            uint8_t decision, uint8_t skip_reason, int kill_errno) {
+  if (!g_proc_cap_enabled)
+    return;
+  uint32_t i = g_proc_cap_idx.fetch_add(1, std::memory_order_relaxed);
+  ProcCapEntry& e = g_proc_cap_buf[i & (sizeof(g_proc_cap_buf) / sizeof(g_proc_cap_buf[0]) - 1)];
+  // copy job id
+  e.job_id[0] = '\0';
+  if (job && !job->id.empty()) {
+    size_t n = job->id.copy(e.job_id, sizeof(e.job_id) - 1);
+    e.job_id[n] = '\0';
+  }
+  e.tick_ms = tick_ms;
+  e.proc_count = count;
+  e.proc_limit = limit;
+  e.decision = decision;
+  e.skip_reason = skip_reason;
+  e.kill_errno = kill_errno;
+  e.final_status = static_cast<int>(job ? job->status : JobStatus::FAILED);
+
+  if (g_proc_cap_dump) {
+    // Minimal single-line structured dump to stderr for post-run capture
+    fprintf(stderr,
+            "PROC_CAP_DBG id=%s tick=%llu count=%d limit=%d decision=%u skip=%u kill_errno=%d "
+            "status=%d\n",
+            e.job_id, (unsigned long long)e.tick_ms, e.proc_count, e.proc_limit, e.decision,
+            e.skip_reason, e.kill_errno, e.final_status);
+  }
+}
+
+} // namespace
+
 class RealProcessSpawner : public IProcessSpawner {
 
 public:
@@ -351,27 +402,40 @@ bool JobRunner::enforce_job_log_cap(std::shared_ptr<Job> job) {
 }
 
 bool JobRunner::enforce_job_process_cap(std::shared_ptr<Job> job, uint64_t now_ms) {
-  if (!inspector_)
+  if (!inspector_) {
+    record_proc_cap(job, now_ms, 0, job->max_child_processes, 3, 1, 0);
     return false;
+  }
 
   int count = inspector_->count_processes_in_pgid(job->process_group);
-  if (count < 0)
+  if (count < 0) {
+    record_proc_cap(job, now_ms, count, job->max_child_processes, 3, 2, 0);
     return false; // Unknown, skip enforcement
+  }
 
   if (count > job->max_child_processes) {
+    // record that we would kill
+    record_proc_cap(job, now_ms, count, job->max_child_processes, 1, 0, 0);
+
+    int kill_errno = 0;
     // Terminate process group
     if (job->process_group > 0) {
-      kill(-job->process_group, SIGTERM);
+      if (kill(-job->process_group, SIGTERM) != 0) {
+        kill_errno = errno;
+      }
       // Optionally, schedule SIGKILL after grace period, but for simplicity, mark immediately
-      // In a real impl, might need a kill queue or delayed action
     }
 
     auto now_system = std::chrono::system_clock::now();
     job->status = JobStatus::PROC_LIMIT;
     job->finished_at = now_system;
     job->ended_at_ms = now_ms;
+
+    record_proc_cap(job, now_ms, count, job->max_child_processes, 2, 0, kill_errno);
     return true;
   }
+
+  record_proc_cap(job, now_ms, count, job->max_child_processes, 0, 0, 0);
   return false;
 }
 

@@ -23,38 +23,32 @@ bool is_alpha(char c) {
 }
 
 void skip_whitespace(std::string_view& s) {
-  while (!s.empty() && is_whitespace(s[0])) {
+  while (!s.empty() && is_whitespace(s[0]))
     s.remove_prefix(1);
-  }
 }
 
 std::string_view trim(std::string_view s) {
-  while (!s.empty() && is_whitespace(s.back())) {
+  while (!s.empty() && is_whitespace(s.back()))
     s.remove_suffix(1);
-  }
-  while (!s.empty() && is_whitespace(s.front())) {
+  while (!s.empty() && is_whitespace(s.front()))
     s.remove_prefix(1);
-  }
   return s;
 }
 
 bool parse_string_value(std::string_view& s, std::string& out) {
   skip_whitespace(s);
-  if (s.empty() || s[0] != '"') {
+  if (s.empty() || s[0] != '"')
     return false;
-  }
   s.remove_prefix(1);
   size_t end = 0;
   while (end < s.size() && s[end] != '"') {
-    if (s[end] == '\\' && end + 1 < s.size()) {
+    if (s[end] == '\\' && end + 1 < s.size())
       end += 2;
-    } else {
+    else
       end++;
-    }
   }
-  if (end >= s.size()) {
+  if (end >= s.size())
     return false;
-  }
   out = std::string(s.substr(0, end));
   s.remove_prefix(end + 1);
   return true;
@@ -63,16 +57,13 @@ bool parse_string_value(std::string_view& s, std::string& out) {
 bool parse_int_value(std::string_view& s, int64_t& out) {
   skip_whitespace(s);
   size_t start = 0;
-  if (!s.empty() && s[0] == '-') {
+  if (!s.empty() && s[0] == '-')
     start = 1;
-  }
-  if (start >= s.size() || !is_digit(s[start])) {
+  if (start >= s.size() || !is_digit(s[start]))
     return false;
-  }
   size_t end = start;
-  while (end < s.size() && is_digit(s[end])) {
+  while (end < s.size() && is_digit(s[end]))
     end++;
-  }
   out = std::stoll(std::string(s.substr(0, end)));
   s.remove_prefix(end);
   return true;
@@ -80,13 +71,11 @@ bool parse_int_value(std::string_view& s, int64_t& out) {
 
 bool parse_uint_value(std::string_view& s, uint64_t& out) {
   skip_whitespace(s);
-  if (s.empty() || !is_digit(s[0])) {
+  if (s.empty() || !is_digit(s[0]))
     return false;
-  }
   size_t end = 0;
-  while (end < s.size() && is_digit(s[end])) {
+  while (end < s.size() && is_digit(s[end]))
     end++;
-  }
   out = std::stoull(std::string(s.substr(0, end)));
   s.remove_prefix(end);
   return true;
@@ -94,45 +83,38 @@ bool parse_uint_value(std::string_view& s, uint64_t& out) {
 
 bool parse_uint8_value(std::string_view& s, uint8_t& out) {
   uint64_t val = 0;
-  if (!parse_uint_value(s, val)) {
+  if (!parse_uint_value(s, val))
     return false;
-  }
-  if (val > 255) {
+  if (val > 255)
     return false;
-  }
   out = static_cast<uint8_t>(val);
   return true;
 }
 
 bool parse_int8_value(std::string_view& s, int8_t& out) {
   int64_t val = 0;
-  if (!parse_int_value(s, val)) {
+  if (!parse_int_value(s, val))
     return false;
-  }
-  if (val < -128 || val > 127) {
+  if (val < -128 || val > 127)
     return false;
-  }
   out = static_cast<int8_t>(val);
   return true;
 }
 
 bool parse_key(std::string_view& s, std::string& key) {
   skip_whitespace(s);
-  if (s.empty() || s[0] != '"') {
+  if (s.empty() || s[0] != '"')
     return false;
-  }
   s.remove_prefix(1);
   size_t end = 0;
   while (end < s.size() && s[end] != '"') {
-    if (s[end] == '\\' && end + 1 < s.size()) {
+    if (s[end] == '\\' && end + 1 < s.size())
       end += 2;
-    } else {
+    else
       end++;
-    }
   }
-  if (end >= s.size()) {
+  if (end >= s.size())
     return false;
-  }
   key = std::string(s.substr(0, end));
   s.remove_prefix(end + 1);
   return true;
@@ -167,10 +149,6 @@ std::string ack_to_string(AckCode code) {
     return "NACK_QUEUE_FULL";
   case AckCode::NACK_PROCESS_DEAD:
     return "NACK_PROCESS_DEAD";
-  case AckCode::NACK_INVALID_GROUP:
-    return "NACK_INVALID_GROUP";
-  case AckCode::NACK_GROUP_CAPACITY:
-    return "NACK_GROUP_CAPACITY";
   }
   return "UNKNOWN";
 }
@@ -183,7 +161,6 @@ ParseResult parse_gov_apply(std::string_view payload) {
     result.error_detail = "payload exceeds 512 bytes";
     return result;
   }
-
   if (payload.empty()) {
     result.ack = AckCode::NACK_INVALID_PAYLOAD;
     result.error_detail = "empty payload";
@@ -214,55 +191,13 @@ ParseResult parse_gov_apply(std::string_view payload) {
       result.error_detail = "failed to parse key";
       return result;
     }
-
     if (!consume_colon(s)) {
       result.ack = AckCode::NACK_PARSE_ERROR;
       result.error_detail = "missing colon after key";
       return result;
     }
 
-    if (key == "version") {
-      std::string val;
-      if (!parse_string_value(s, val)) {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "failed to parse version value";
-        return result;
-      }
-      if (val == "2" || val == "v2") {
-        result.msg.version = GovVersion::V2;
-      } else if (val == "1" || val == "v1") {
-        result.msg.version = GovVersion::V1;
-      }
-    } else if (key == "group") {
-      std::string val;
-      if (!parse_string_value(s, val)) {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "failed to parse group value";
-        return result;
-      }
-      if (val.size() > kMaxGroupIdLen) {
-        result.ack = AckCode::NACK_INVALID_GROUP;
-        result.error_detail = "group id exceeds max length";
-        return result;
-      }
-      result.msg.group = val;
-    } else if (key == "action") {
-      std::string val;
-      if (!parse_string_value(s, val)) {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "failed to parse action value";
-        return result;
-      }
-      if (val == "warn" || val == "WARN") {
-        result.msg.action = ViolationAction::WARN;
-      } else if (val == "soft_kill" || val == "SOFT_KILL") {
-        result.msg.action = ViolationAction::SOFT_KILL;
-      } else if (val == "hard_kill" || val == "HARD_KILL") {
-        result.msg.action = ViolationAction::HARD_KILL;
-      } else if (val == "none" || val == "NONE") {
-        result.msg.action = ViolationAction::NONE;
-      }
-    } else if (key == "pid") {
+    if (key == "pid") {
       int64_t pid_val = 0;
       if (!parse_int_value(s, pid_val)) {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -276,6 +211,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.pid = static_cast<int32_t>(pid_val);
       has_pid = true;
+
     } else if (key == "cpu") {
       if (s.empty() || s.front() != '{') {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -285,22 +221,16 @@ ParseResult parse_gov_apply(std::string_view payload) {
       size_t brace_end = 1;
       int depth = 1;
       while (brace_end < s.size() && depth > 0) {
-        if (s[brace_end] == '{') {
+        if (s[brace_end] == '{')
           depth++;
-        } else if (s[brace_end] == '}') {
+        else if (s[brace_end] == '}')
           depth--;
-        }
         brace_end++;
       }
       std::string_view cpu_obj = s.substr(0, brace_end);
       s.remove_prefix(brace_end);
 
       cpu_obj = trim(cpu_obj);
-      if (cpu_obj.front() != '{' || cpu_obj.back() != '}') {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "malformed cpu object";
-        return result;
-      }
       cpu_obj.remove_prefix(1);
       cpu_obj.remove_suffix(1);
       cpu_obj = trim(cpu_obj);
@@ -342,14 +272,6 @@ ParseResult parse_gov_apply(std::string_view payload) {
             return result;
           }
           cpu_policy.max_pct = val;
-        } else if (cpu_key == "period_us") {
-          uint64_t val;
-          if (!parse_uint_value(cpu_obj, val)) {
-            result.ack = AckCode::NACK_PARSE_ERROR;
-            result.error_detail = "failed to parse period_us value";
-            return result;
-          }
-          cpu_policy.period_us = static_cast<uint32_t>(val);
         } else {
           result.ack = AckCode::NACK_UNKNOWN_FIELD;
           result.error_detail = "unknown cpu field: " + cpu_key;
@@ -364,6 +286,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.cpu = cpu_policy;
       has_cpu = true;
+
     } else if (key == "mem") {
       if (s.empty() || s.front() != '{') {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -373,22 +296,16 @@ ParseResult parse_gov_apply(std::string_view payload) {
       size_t brace_end = 1;
       int depth = 1;
       while (brace_end < s.size() && depth > 0) {
-        if (s[brace_end] == '{') {
+        if (s[brace_end] == '{')
           depth++;
-        } else if (s[brace_end] == '}') {
+        else if (s[brace_end] == '}')
           depth--;
-        }
         brace_end++;
       }
       std::string_view mem_obj = s.substr(0, brace_end);
       s.remove_prefix(brace_end);
 
       mem_obj = trim(mem_obj);
-      if (mem_obj.front() != '{' || mem_obj.back() != '}') {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "malformed mem object";
-        return result;
-      }
       mem_obj.remove_prefix(1);
       mem_obj.remove_suffix(1);
       mem_obj = trim(mem_obj);
@@ -414,14 +331,6 @@ ParseResult parse_gov_apply(std::string_view payload) {
             return result;
           }
           mem_policy.max_bytes = val;
-        } else if (mem_key == "high_bytes") {
-          uint64_t val;
-          if (!parse_uint_value(mem_obj, val)) {
-            result.ack = AckCode::NACK_PARSE_ERROR;
-            result.error_detail = "failed to parse high_bytes value";
-            return result;
-          }
-          mem_policy.high_bytes = val;
         } else {
           result.ack = AckCode::NACK_UNKNOWN_FIELD;
           result.error_detail = "unknown mem field: " + mem_key;
@@ -436,6 +345,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.mem = mem_policy;
       has_mem = true;
+
     } else if (key == "pids") {
       if (s.empty() || s.front() != '{') {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -445,22 +355,16 @@ ParseResult parse_gov_apply(std::string_view payload) {
       size_t brace_end = 1;
       int depth = 1;
       while (brace_end < s.size() && depth > 0) {
-        if (s[brace_end] == '{') {
+        if (s[brace_end] == '{')
           depth++;
-        } else if (s[brace_end] == '}') {
+        else if (s[brace_end] == '}')
           depth--;
-        }
         brace_end++;
       }
       std::string_view pids_obj = s.substr(0, brace_end);
       s.remove_prefix(brace_end);
 
       pids_obj = trim(pids_obj);
-      if (pids_obj.front() != '{' || pids_obj.back() != '}') {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "malformed pids object";
-        return result;
-      }
       pids_obj.remove_prefix(1);
       pids_obj.remove_suffix(1);
       pids_obj = trim(pids_obj);
@@ -505,6 +409,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.pids = pids_policy;
       has_pids = true;
+
     } else if (key == "rlim") {
       if (s.empty() || s.front() != '{') {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -514,22 +419,16 @@ ParseResult parse_gov_apply(std::string_view payload) {
       size_t brace_end = 1;
       int depth = 1;
       while (brace_end < s.size() && depth > 0) {
-        if (s[brace_end] == '{') {
+        if (s[brace_end] == '{')
           depth++;
-        } else if (s[brace_end] == '}') {
+        else if (s[brace_end] == '}')
           depth--;
-        }
         brace_end++;
       }
       std::string_view rlim_obj = s.substr(0, brace_end);
       s.remove_prefix(brace_end);
 
       rlim_obj = trim(rlim_obj);
-      if (rlim_obj.front() != '{' || rlim_obj.back() != '}') {
-        result.ack = AckCode::NACK_PARSE_ERROR;
-        result.error_detail = "malformed rlim object";
-        return result;
-      }
       rlim_obj.remove_prefix(1);
       rlim_obj.remove_suffix(1);
       rlim_obj = trim(rlim_obj);
@@ -593,6 +492,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.rlim = rlim_policy;
       has_rlim = true;
+
     } else if (key == "oom_score_adj") {
       int64_t val = 0;
       if (!parse_int_value(s, val)) {
@@ -607,6 +507,7 @@ ParseResult parse_gov_apply(std::string_view payload) {
       }
       result.msg.oom_score_adj = static_cast<int>(val);
       has_oom_score_adj = true;
+
     } else {
       result.ack = AckCode::NACK_UNKNOWN_FIELD;
       result.error_detail = "unknown field: " + key;

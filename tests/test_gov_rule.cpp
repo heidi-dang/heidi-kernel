@@ -150,6 +150,7 @@ TEST_F(GovApplyParserTest, AckCodeToString) {
   EXPECT_EQ(ack_to_string(AckCode::NACK_UNKNOWN_FIELD), "NACK_UNKNOWN_FIELD");
   EXPECT_EQ(ack_to_string(AckCode::NACK_QUEUE_FULL), "NACK_QUEUE_FULL");
   EXPECT_EQ(ack_to_string(AckCode::NACK_PROCESS_DEAD), "NACK_PROCESS_DEAD");
+<<<<<<< HEAD
   EXPECT_EQ(ack_to_string(AckCode::NACK_INVALID_GROUP), "NACK_INVALID_GROUP");
   EXPECT_EQ(ack_to_string(AckCode::NACK_GROUP_CAPACITY), "NACK_GROUP_CAPACITY");
 }
@@ -194,6 +195,8 @@ TEST_F(GovApplyParserTest, ParseV1BackwardCompat) {
   auto result = parse_gov_apply(R"({"pid":1234,"cpu":{"affinity":"0-3"}})");
   EXPECT_TRUE(result.success);
   EXPECT_EQ(result.msg.version, GovVersion::V1);
+=======
+>>>>>>> 33a8683 (feat(gov): initial process resource governor (P1-1 + P1-2 core))
 }
 
 } // namespace gov
