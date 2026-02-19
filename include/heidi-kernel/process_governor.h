@@ -15,6 +15,13 @@
 namespace heidi {
 namespace gov {
 
+struct ApplyResult {
+  bool success = false;
+  int err = 0;
+  std::string error_detail;
+  ApplyField applied_fields = ApplyField::NONE;
+};
+
 class ProcessGovernor {
 public:
   ProcessGovernor();
