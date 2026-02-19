@@ -2,86 +2,76 @@
 
 The heidi-kernel daemon uses Unix domain sockets for IPC. Messages are line-delimited text.
 
-## HTTP API (Dashboard)
-
-The dashboard daemon (heidi-dashd) provides a REST API over HTTP.
-
-### Endpoints
-
-#### GET /api/status
-Returns kernel status as JSON.
-
-#### GET /api/governor/policy
-Returns the current governor policy as JSON.
-
-Request: GET /api/governor/policy
-
-Response:
-```json
-{
-  "max_running_jobs": 10,
-  "max_queue_depth": 100,
-  "cpu_high_watermark_pct": 85.0,
-  "mem_high_watermark_pct": 90.0,
-  "cooldown_ms": 1000,
-  "min_start_gap_ms": 100
-}
-```
-
-#### PUT /api/governor/policy
-Updates the governor policy. Accepts partial updates. Unknown fields are ignored.
-
-Request: PUT /api/governor/policy
-Body: JSON with fields to update.
-
-Response (200 OK):
-```json
-{
-  "max_running_jobs": 20,
-  "max_queue_depth": 200,
-  "cpu_high_watermark_pct": 80.0,
-  "mem_high_watermark_pct": 90.0,
-  "cooldown_ms": 1000,
-  "min_start_gap_ms": 100
-}
-```
-
-Response (400 Validation Error):
-```json
-{
-  "max_running_jobs": "must be between 1 and 1000",
-  "cpu_high_watermark_pct": "must be between 0 and 100"
-}
-```
-
-#### GET /api/governor/diagnostics
-Returns tick diagnostics as JSON.
-
-Request: GET /api/governor/diagnostics
-
-Response:
-```json
-{
-  "last_decision": "START_NOW",
-  "last_block_reason": "NONE",
-  "last_retry_after_ms": 0,
-  "last_tick_now_ms": 1000,
-  "last_tick_running": 5,
-  "last_tick_queued": 2,
-  "jobs_started_this_tick": 3,
-  "jobs_scanned_this_tick": 10
-}
-```
-
 ## Unix Socket API (Direct)
 
-## Request Types
-- `ping` -> `pong`
-- `status` -> multiline status with version, cpu, mem
-- `metrics latest` -> latest cpu/mem metrics
-- `metrics tail <n>` -> last n metrics from disk
-- `governor/policy` -> multiline policy
-- `governor/diagnostics` -> multiline diagnostics
+The kernel daemon listens on `/tmp/heidi-kernel.sock` (default).
+
+### Request Types
+
+#### `ping`
+Returns `pong\n`.
+
+#### `status`
+Returns multiline status including version and resource usage.
+
+Response example:
+```text
+status
+version: 0.1.0
+cpu: 4.5%
+mem_total: 8150108
+mem_free: 7100324
+running_jobs: 0
+queued_jobs: 0
+rejected_jobs: 0
+blocked_reason: none
+retry_after_ms: 0
+cpu_pct: 4.5
+mem_pct: 12.8
+```
+
+#### `governor/policy`
+Returns the current resource governor policy.
+
+Response example:
+```text
+governor/policy
+max_running_jobs: 10
+max_queue_depth: 100
+cpu_high_watermark_pct: 85.0
+mem_high_watermark_pct: 90.0
+cooldown_ms: 1000
+min_start_gap_ms: 100
+```
+
+#### `governor/policy_update <json>`
+Updates the governor policy. Body must be a JSON object (partial updates allowed).
+
+Example: `governor/policy_update {"max_running_jobs": 20}`
+
+#### `governor/diagnostics`
+Returns detailed diagnostics from the last governor tick.
+
+Response example:
+```text
+governor/diagnostics
+last_decision: START_NOW
+last_block_reason: NONE
+last_retry_after_ms: 0
+last_tick_now_ms: 1708267594000
+last_tick_running: 5
+last_tick_queued: 2
+jobs_started_this_tick: 3
+jobs_scanned_this_tick: 10
+```
+
+#### `STATUS` (heidi-kernel binary only)
+The minimal `heidi-kernel` binary responds to `STATUS\n` with a JSON snapshot.
+
+Response:
+```json
+{"version":"0.1.0","pid":1234,"uptime_ms":1000,"rss_kb":4096,"threads":3,"queue_depth":0}
+```
 
 ## Response Format
-Multiline text with key: value pairs or CSV for tail.
+Most commands return multiline text with `key: value` pairs, unless otherwise specified.

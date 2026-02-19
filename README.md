@@ -18,18 +18,12 @@ cmake --build --preset debug
 
 # Query status (terminal 2)
 printf "STATUS\n" | socat - UNIX-CONNECT:/tmp/heidi-kernel.sock
-
-# Run dashboard (terminal 3)
-./build/debug/heidi-dashd
-
-# Open browser
-open http://127.0.0.1:7778
 ```
 
 ## Components
 
 - **heidi-kernel**: Daemon with Unix socket for status queries
-- **heidi-dashd**: HTTP bridge serving dashboard on port 7778
+- **UI/Dashboard**: Note: the kernel has no built-in UI; dashboards live in `heidid/engine`.
 
 ## Socket Protocol
 
