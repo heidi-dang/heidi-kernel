@@ -150,52 +150,13 @@ TEST_F(GovApplyParserTest, AckCodeToString) {
   EXPECT_EQ(ack_to_string(AckCode::NACK_UNKNOWN_FIELD), "NACK_UNKNOWN_FIELD");
   EXPECT_EQ(ack_to_string(AckCode::NACK_QUEUE_FULL), "NACK_QUEUE_FULL");
   EXPECT_EQ(ack_to_string(AckCode::NACK_PROCESS_DEAD), "NACK_PROCESS_DEAD");
-  EXPECT_EQ(ack_to_string(AckCode::NACK_INVALID_GROUP), "NACK_INVALID_GROUP");
-  EXPECT_EQ(ack_to_string(AckCode::NACK_GROUP_CAPACITY), "NACK_GROUP_CAPACITY");
-}
-
-TEST_F(GovApplyParserTest, ParseV2WithGroup) {
-  auto result =
-      parse_gov_apply(R"({"version":"v2","pid":1234,"group":"mygroup","cpu":{"affinity":"0-1"}})");
-  EXPECT_TRUE(result.success);
-  EXPECT_EQ(result.msg.version, GovVersion::V2);
-  ASSERT_TRUE(result.msg.group.has_value());
-  EXPECT_EQ(*result.msg.group, "mygroup");
-}
-
-TEST_F(GovApplyParserTest, ParseV2WithAction) {
-  auto result = parse_gov_apply(R"({"version":"v2","pid":1234,"action":"warn"})");
-  EXPECT_TRUE(result.success);
-  EXPECT_EQ(result.msg.version, GovVersion::V2);
-  ASSERT_TRUE(result.msg.action.has_value());
-  EXPECT_EQ(*result.msg.action, ViolationAction::WARN);
-}
-
-TEST_F(GovApplyParserTest, ParseV2WithCpuPeriodUs) {
-  auto result = parse_gov_apply(R"({"version":"v2","pid":1234,"cpu":{"period_us":10000}})");
-  EXPECT_TRUE(result.success);
-  ASSERT_TRUE(result.msg.cpu.has_value());
-  ASSERT_TRUE(result.msg.cpu->period_us.has_value());
-  EXPECT_EQ(*result.msg.cpu->period_us, 10000);
-}
-
-TEST_F(GovApplyParserTest, ParseV2WithMemHighBytes) {
-  auto result = parse_gov_apply(
-      R"({"version":"v2","pid":1234,"mem":{"max_bytes":8589934592,"high_bytes":4294967296}})");
-  EXPECT_TRUE(result.success);
-  ASSERT_TRUE(result.msg.mem.has_value());
-  ASSERT_TRUE(result.msg.mem->max_bytes.has_value());
-  ASSERT_TRUE(result.msg.mem->high_bytes.has_value());
-  EXPECT_EQ(*result.msg.mem->max_bytes, 8589934592ULL);
-  EXPECT_EQ(*result.msg.mem->high_bytes, 4294967296ULL);
 }
 
 TEST_F(GovApplyParserTest, ParseV1BackwardCompat) {
   auto result = parse_gov_apply(R"({"pid":1234,"cpu":{"affinity":"0-3"}})");
   EXPECT_TRUE(result.success);
-  EXPECT_EQ(result.msg.version, GovVersion::V1);
->>>>>>> 33a8683 (feat(gov): initial process resource governor (P1-1 + P1-2 core))
->>>>>>> ec0e7ce (feat(gov): initial process resource governor (P1-1 + P1-2 core))
+  // P1 API: payloads without explicit version are treated as V1; no version field present.
+}
 }
 
 } // namespace gov
