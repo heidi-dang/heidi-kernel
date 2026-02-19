@@ -18,6 +18,36 @@
 namespace heidi {
 namespace gov {
 
+enum class GovEventType : uint8_t {
+  APPLY_SUCCESS = 0,
+  APPLY_FAILURE = 1,
+  PID_EXIT = 2,
+  PID_EVICTED = 3,
+  GROUP_EVICTED = 4,
+  PIDMAP_EVICTED = 5,
+  CGROUP_UNAVAILABLE = 6,
+};
+
+constexpr inline const char* gov_event_name(GovEventType e) {
+  switch (e) {
+  case GovEventType::APPLY_SUCCESS:
+    return "APPLY_SUCCESS";
+  case GovEventType::APPLY_FAILURE:
+    return "APPLY_FAILURE";
+  case GovEventType::PID_EXIT:
+    return "PID_EXIT";
+  case GovEventType::PID_EVICTED:
+    return "PID_EVICTED";
+  case GovEventType::GROUP_EVICTED:
+    return "GROUP_EVICTED";
+  case GovEventType::PIDMAP_EVICTED:
+    return "PIDMAP_EVICTED";
+  case GovEventType::CGROUP_UNAVAILABLE:
+    return "CGROUP_UNAVAILABLE";
+  }
+  return "UNKNOWN";
+}
+
 struct ApplyResult {
   bool success = false;
   int err = 0;

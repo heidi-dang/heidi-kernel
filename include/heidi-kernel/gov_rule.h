@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace heidi {
 namespace gov {
@@ -42,7 +43,7 @@ struct CpuPolicy {
   std::optional<int8_t> nice;
   std::optional<uint8_t> max_pct;
   std::optional<uint32_t> period_us;
-  std::optional<uint32_t> quota_us;
+  std::optional<uint64_t> quota_us;
 };
 
 struct MemPolicy {
