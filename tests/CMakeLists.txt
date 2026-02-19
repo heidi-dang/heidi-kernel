@@ -17,6 +17,7 @@ add_executable(unit_tests
     test_job.cpp
     test_governor.cpp
     test_policy_store.cpp
+    test_gov_rule.cpp
     ../src/config.cpp
 )
 

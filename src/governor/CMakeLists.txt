@@ -1,5 +1,8 @@
 add_library(heidi-kernel-governor STATIC
     resource_governor.cpp
+    gov_rule.cpp
+    process_governor.cpp
+    cgroup_driver.cpp
 )
 
 target_include_directories(heidi-kernel-governor
