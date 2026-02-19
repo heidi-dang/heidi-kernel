@@ -167,6 +167,10 @@ std::string ack_to_string(AckCode code) {
     return "NACK_QUEUE_FULL";
   case AckCode::NACK_PROCESS_DEAD:
     return "NACK_PROCESS_DEAD";
+  case AckCode::NACK_INVALID_GROUP:
+    return "NACK_INVALID_GROUP";
+  case AckCode::NACK_GROUP_CAPACITY:
+    return "NACK_GROUP_CAPACITY";
   }
   return "UNKNOWN";
 }
@@ -217,7 +221,48 @@ ParseResult parse_gov_apply(std::string_view payload) {
       return result;
     }
 
-    if (key == "pid") {
+    if (key == "version") {
+      std::string val;
+      if (!parse_string_value(s, val)) {
+        result.ack = AckCode::NACK_PARSE_ERROR;
+        result.error_detail = "failed to parse version value";
+        return result;
+      }
+      if (val == "2" || val == "v2") {
+        result.msg.version = GovVersion::V2;
+      } else if (val == "1" || val == "v1") {
+        result.msg.version = GovVersion::V1;
+      }
+    } else if (key == "group") {
+      std::string val;
+      if (!parse_string_value(s, val)) {
+        result.ack = AckCode::NACK_PARSE_ERROR;
+        result.error_detail = "failed to parse group value";
+        return result;
+      }
+      if (val.size() > kMaxGroupIdLen) {
+        result.ack = AckCode::NACK_INVALID_GROUP;
+        result.error_detail = "group id exceeds max length";
+        return result;
+      }
+      result.msg.group = val;
+    } else if (key == "action") {
+      std::string val;
+      if (!parse_string_value(s, val)) {
+        result.ack = AckCode::NACK_PARSE_ERROR;
+        result.error_detail = "failed to parse action value";
+        return result;
+      }
+      if (val == "warn" || val == "WARN") {
+        result.msg.action = ViolationAction::WARN;
+      } else if (val == "soft_kill" || val == "SOFT_KILL") {
+        result.msg.action = ViolationAction::SOFT_KILL;
+      } else if (val == "hard_kill" || val == "HARD_KILL") {
+        result.msg.action = ViolationAction::HARD_KILL;
+      } else if (val == "none" || val == "NONE") {
+        result.msg.action = ViolationAction::NONE;
+      }
+    } else if (key == "pid") {
       int64_t pid_val = 0;
       if (!parse_int_value(s, pid_val)) {
         result.ack = AckCode::NACK_PARSE_ERROR;
@@ -297,6 +342,14 @@ ParseResult parse_gov_apply(std::string_view payload) {
             return result;
           }
           cpu_policy.max_pct = val;
+        } else if (cpu_key == "period_us") {
+          uint64_t val;
+          if (!parse_uint_value(cpu_obj, val)) {
+            result.ack = AckCode::NACK_PARSE_ERROR;
+            result.error_detail = "failed to parse period_us value";
+            return result;
+          }
+          cpu_policy.period_us = static_cast<uint32_t>(val);
         } else {
           result.ack = AckCode::NACK_UNKNOWN_FIELD;
           result.error_detail = "unknown cpu field: " + cpu_key;
@@ -361,6 +414,14 @@ ParseResult parse_gov_apply(std::string_view payload) {
             return result;
           }
           mem_policy.max_bytes = val;
+        } else if (mem_key == "high_bytes") {
+          uint64_t val;
+          if (!parse_uint_value(mem_obj, val)) {
+            result.ack = AckCode::NACK_PARSE_ERROR;
+            result.error_detail = "failed to parse high_bytes value";
+            return result;
+          }
+          mem_policy.high_bytes = val;
         } else {
           result.ack = AckCode::NACK_UNKNOWN_FIELD;
           result.error_detail = "unknown mem field: " + mem_key;
