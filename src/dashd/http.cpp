@@ -1,13 +1,11 @@
 #include "heidi-kernel/http.h"
 
 #include <arpa/inet.h>
-#include <cstdio>
 #include <cstring>
 #include <fcntl.h>
 #include <string>
 #include <strings.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 namespace {
@@ -73,13 +71,6 @@ void HttpServer::serve_forever() {
 }
 
 void HttpServer::handle_client(int client_fd) {
-  struct timeval tv;
-  tv.tv_sec = 5;
-  tv.tv_usec = 0;
-  if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-    perror("setsockopt SO_RCVTIMEO");
-  }
-
   std::string request_buffer;
   char temp_buf[4096];
   ssize_t n;
