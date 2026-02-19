@@ -1,6 +1,8 @@
 #include "heidi-kernel/job.h"
 #include "heidi-kernel/metrics.h"
 #include "heidi-kernel/process_inspector.h"
+// Include the procfs starttime helper for a small unit test below.
+#include "../src/job/procfs_starttime.h"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -188,3 +190,16 @@ TEST_F(JobTest, Determinism_RepeatedTicksSameInputsSameOutputs) {
 }
 
 } // namespace heidi
+
+TEST(ParseStartTime, HandlesCommWithSpaces) {
+  // Build a synthetic /proc/<pid>/stat line where comm contains spaces and
+  // the starttime (field 22) is 999999. We include enough fields after ')' to
+  // ensure the parser can find field 22.
+  // Ensure there are at least 22 fields overall; here we include tokens up to
+  // field 22 (starttime=999999) after pid and comm.
+  std::string line =
+      "1234 (my weird comm) R 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 999999 0 0";
+  auto res = heidi::parse_start_time_from_stat_line(line.c_str());
+  ASSERT_TRUE(res.has_value());
+  EXPECT_EQ(*res, 999999ULL);
+}
