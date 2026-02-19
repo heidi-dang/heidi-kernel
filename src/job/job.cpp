@@ -128,7 +128,23 @@ public:
 
       close(pipe_stderr[0]);
 
-      setpgid(0, 0);
+      // Optional debug instrumentation; only enabled when HK_DEBUG_PROC_CAP is set.
+      if (g_proc_cap_enabled) {
+        pid_t cpid = getpid();
+        pid_t cpgid_before = getpgid(0);
+        pid_t csid = getsid(0);
+        int set_err = 0;
+        int setres = setpgid(0, 0);
+        if (setres != 0)
+          set_err = errno;
+        fprintf(stderr,
+                "SPAWN_DBG child pid=%d ppid=%d pgid_before=%d setpgid_res=%d setpgid_errno=%d "
+                "sid=%d\n",
+                cpid, getppid(), (int)cpgid_before, setres, set_err, (int)csid);
+      } else {
+        // still attempt to setpgid for correct behavior, but don't log
+        setpgid(0, 0);
+      }
 
       dup2(pipe_stdout[1], STDOUT_FILENO);
 
@@ -148,7 +164,29 @@ public:
 
       close(pipe_stderr[1]);
 
-      job.process_group = pid;
+      // Parent: attempt to record the actual PGID of the leader (robustly).
+      // Some commands run via /bin/sh -c may re-parent or change PGID during exec;
+      // record the PGID observed from the leader pid rather than assuming pid==pgid.
+      pid_t leader_pid = pid;
+      int pg_get_errno = 0;
+      pid_t observed_pgid = -1;
+      // Try a few times with small sleeps to allow the child to set its PGID.
+      for (int attempt = 0; attempt < 10; ++attempt) {
+        observed_pgid = getpgid(leader_pid);
+        if (observed_pgid != -1)
+          break;
+        pg_get_errno = errno;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      if (observed_pgid == -1) {
+        // fallback: record the pid (old behavior) but log the failure once.
+        observed_pgid = pid;
+      }
+      if (g_proc_cap_enabled) {
+        fprintf(stderr, "SPAWN_DBG parent leader_pid=%d observed_pgid=%d pg_get_errno=%d\n",
+                leader_pid, (int)observed_pgid, pg_get_errno);
+      }
+      job.process_group = observed_pgid;
 
       *stdout_fd = pipe_stdout[0];
 
@@ -405,6 +443,29 @@ bool JobRunner::enforce_job_process_cap(std::shared_ptr<Job> job, uint64_t now_m
   if (!inspector_) {
     record_proc_cap(job, now_ms, 0, job->max_child_processes, 3, 1, 0);
     return false;
+  }
+
+  // Instrumentation: log what PGID we think we're inspecting and a cheap probe
+  if (getenv("HK_DEBUG_PROC_CAP")) {
+    pid_t stored_pgid = job->process_group;
+    int pg_get_errno = 0;
+    pid_t pg_res = -1;
+    if (stored_pgid > 0) {
+      pg_res = getpgid(stored_pgid);
+      if (pg_res == -1)
+        pg_get_errno = errno;
+    }
+    int kill_res = -1, kill_errno = 0;
+    if (stored_pgid > 0) {
+      kill_res = kill(-stored_pgid, 0);
+      if (kill_res == -1)
+        kill_errno = errno;
+    }
+    fprintf(stderr,
+            "PROC_CAP_GOV_DBG job=%s stored_pgid=%d getpgid=%d getpgid_errno=%d kill_exist_res=%d "
+            "kill_errno=%d limit=%d\n",
+            job->id.c_str(), (int)stored_pgid, (int)pg_res, pg_get_errno, kill_res, kill_errno,
+            job->max_child_processes);
   }
 
   int count = inspector_->count_processes_in_pgid(job->process_group);
